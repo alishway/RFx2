@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Bot, User, AlertTriangle } from "lucide-react";
 import { ChatMessage, IntakeFormData } from "@/types/intake";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ScopeChatProps {
   formData: IntakeFormData;
@@ -57,10 +58,8 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
-      // Simulate AI response for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const aiResponse = generateAIResponse(messageText, formData);
+      // Call AI edge function
+      const aiResponse = await generateAIResponse(messageText, formData, messages);
       
       setMessages(prev => [...prev, aiResponse]);
       
@@ -68,18 +67,51 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
       updateFormDataFromMessage(messageText, onUpdate);
       
     } catch (error) {
+      console.error('AI response error:', error);
+      // Fallback to local response
+      const fallbackResponse = generateFallbackResponse(messageText, formData);
+      setMessages(prev => [...prev, fallbackResponse]);
+      
       toast({
-        title: "Error",
-        description: "Failed to get AI response. Please try again.",
-        variant: "destructive"
+        title: "AI Temporarily Unavailable",
+        description: "Using fallback response. AI features will return shortly.",
+        variant: "default"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const generateAIResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
-    // Simple response generation - would be replaced with actual AI
+  const generateAIResponse = async (userMessage: string, formData: IntakeFormData, conversationHistory: ChatMessage[]): Promise<ChatMessage> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-scope-chat', {
+        body: {
+          message: userMessage,
+          formData,
+          conversationHistory: conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        }
+      });
+
+      if (error) throw error;
+
+      return {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+        suggestions: data.suggestions || []
+      };
+    } catch (error) {
+      console.error('AI response error:', error);
+      throw error;
+    }
+  };
+
+  const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
+    // Simple response generation as fallback
     let response = "";
     let suggestions: string[] = [];
     

@@ -171,9 +171,11 @@ export type Database = {
             | Database["public"]["Enums"]["budget_tolerance"]
             | null
           commodity_type: string | null
+          compliance_flags: Json | null
           created_at: string
           deliverables: Json | null
           end_date: string | null
+          estimated_value: number | null
           id: string
           requirements: Json | null
           start_date: string | null
@@ -189,9 +191,11 @@ export type Database = {
             | Database["public"]["Enums"]["budget_tolerance"]
             | null
           commodity_type?: string | null
+          compliance_flags?: Json | null
           created_at?: string
           deliverables?: Json | null
           end_date?: string | null
+          estimated_value?: number | null
           id?: string
           requirements?: Json | null
           start_date?: string | null
@@ -207,9 +211,11 @@ export type Database = {
             | Database["public"]["Enums"]["budget_tolerance"]
             | null
           commodity_type?: string | null
+          compliance_flags?: Json | null
           created_at?: string
           deliverables?: Json | null
           end_date?: string | null
+          estimated_value?: number | null
           id?: string
           requirements?: Json | null
           start_date?: string | null
