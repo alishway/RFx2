@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ProcurementReviewService } from "@/services/procurementReviewService";
-import { Clock, FileText, AlertTriangle, CheckCircle, Eye } from "lucide-react";
+import { Clock, FileText, AlertTriangle, CheckCircle, Eye, ArrowLeft, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
 type IntakeForm = Database["public"]["Tables"]["intake_forms"]["Row"];
@@ -84,6 +85,26 @@ const ProcurementReviewDashboard: React.FC<ProcurementReviewDashboardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex items-center space-x-4">
+          <Link to="/">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Home className="w-4 h-4" />
+            <span>/</span>
+            <span className="font-medium text-foreground">Procurement Review</span>
+          </div>
+        </div>
+        <Button onClick={loadForms} variant="outline">
+          Refresh
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Procurement Review Dashboard</h2>
@@ -91,9 +112,6 @@ const ProcurementReviewDashboard: React.FC<ProcurementReviewDashboardProps> = ({
             Review and process intake forms from end users
           </p>
         </div>
-        <Button onClick={loadForms} variant="outline">
-          Refresh
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

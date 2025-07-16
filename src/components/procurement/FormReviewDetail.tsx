@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ProcurementReviewService, type ProcurementReviewData } from "@/services/procurementReviewService";
 import { ComplianceService, type ComplianceResult } from "@/services/complianceService";
-import { ArrowLeft, AlertTriangle, CheckCircle, FileText, MessageSquare, Download } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle, FileText, MessageSquare, Download, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 import AIResultsViewer from "./AIResultsViewer";
 import ComplianceChecker from "./ComplianceChecker";
 
@@ -127,18 +128,35 @@ const FormReviewDetail: React.FC<FormReviewDetailProps> = ({ formId, onBack }) =
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between border-b pb-4">
         <div className="flex items-center space-x-4">
-          <Button onClick={onBack} variant="outline" size="sm">
+          <Link to="/">
+            <Button variant="ghost" size="sm">
+              <Home className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
+          <Button onClick={onBack} variant="ghost" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            Review Dashboard
           </Button>
-          <div>
-            <h2 className="text-2xl font-bold">{intakeForm.title}</h2>
-            <p className="text-muted-foreground">
-              Form Review • Submitted {formatDate(intakeForm.created_at)}
-            </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Home className="w-4 h-4" />
+            <span>/</span>
+            <span>Procurement Review</span>
+            <span>/</span>
+            <span className="font-medium text-foreground">Form Details</span>
           </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">{intakeForm.title}</h2>
+          <p className="text-muted-foreground">
+            Form Review • Submitted {formatDate(intakeForm.created_at)}
+          </p>
         </div>
         
         <div className="flex items-center space-x-4">
