@@ -14,16 +14,271 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_trails: {
+        Row: {
+          action: string
+          changed_fields: string[] | null
+          created_at: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id: string
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          intake_form_id: string
+          session_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intake_form_id: string
+          session_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intake_form_id?: string
+          session_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          intake_form_id: string
+          mime_type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          intake_form_id: string
+          mime_type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          intake_form_id?: string
+          mime_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_attachments_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_forms: {
+        Row: {
+          background: string | null
+          budget_tolerance:
+            | Database["public"]["Enums"]["budget_tolerance"]
+            | null
+          commodity_type: string | null
+          created_at: string
+          deliverables: Json | null
+          end_date: string | null
+          id: string
+          requirements: Json | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["intake_status"]
+          tasks: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          background?: string | null
+          budget_tolerance?:
+            | Database["public"]["Enums"]["budget_tolerance"]
+            | null
+          commodity_type?: string | null
+          created_at?: string
+          deliverables?: Json | null
+          end_date?: string | null
+          id?: string
+          requirements?: Json | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["intake_status"]
+          tasks?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          background?: string | null
+          budget_tolerance?:
+            | Database["public"]["Enums"]["budget_tolerance"]
+            | null
+          commodity_type?: string | null
+          created_at?: string
+          deliverables?: Json | null
+          end_date?: string | null
+          id?: string
+          requirements?: Json | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["intake_status"]
+          tasks?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          organization: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          organization?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          organization?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      budget_tolerance: "sensitive" | "moderate" | "flexible"
+      intake_status:
+        | "draft"
+        | "submitted"
+        | "in_review"
+        | "approved"
+        | "rejected"
+      user_role: "end_user" | "procurement_lead" | "approver" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +405,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      budget_tolerance: ["sensitive", "moderate", "flexible"],
+      intake_status: [
+        "draft",
+        "submitted",
+        "in_review",
+        "approved",
+        "rejected",
+      ],
+      user_role: ["end_user", "procurement_lead", "approver", "admin"],
+    },
   },
 } as const
