@@ -2,10 +2,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RFxIntakeForm } from "@/components/RFxIntakeForm";
 import UserMenu from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { Eye } from "lucide-react";
 
 const Index = () => {
   const { user, profile } = useAuth();
+  
+  const isProcurementRole = profile?.role && ["procurement_lead", "approver", "admin"].includes(profile.role);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
@@ -41,6 +45,27 @@ const Index = () => {
             AI-Powered Procurement Assistance for Canadian Public Sector
           </p>
         </div>
+
+        {isProcurementRole && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Procurement Team Actions</CardTitle>
+                <CardDescription>
+                  Review and process intake forms from end users
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link to="/procurement-review">
+                  <Button className="w-full">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Access Procurement Review Dashboard
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
         <RFxIntakeForm />
       </div>

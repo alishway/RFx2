@@ -14,6 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_generated_outputs: {
+        Row: {
+          ai_model: string | null
+          content_type: string
+          generated_at: string
+          generated_content: Json
+          id: string
+          intake_form_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision_notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          content_type: string
+          generated_at?: string
+          generated_content?: Json
+          id?: string
+          intake_form_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision_notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          content_type?: string
+          generated_at?: string
+          generated_content?: Json
+          id?: string
+          intake_form_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision_notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generated_outputs_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_workflows: {
+        Row: {
+          assigned_to_role: string
+          assigned_to_user: string | null
+          current_stage: string
+          id: string
+          intake_form_id: string
+          is_active: boolean
+          stage_completed_at: string | null
+          stage_notes: string | null
+          stage_started_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to_role: string
+          assigned_to_user?: string | null
+          current_stage?: string
+          id?: string
+          intake_form_id: string
+          is_active?: boolean
+          stage_completed_at?: string | null
+          stage_notes?: string | null
+          stage_started_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to_role?: string
+          assigned_to_user?: string | null
+          current_stage?: string
+          id?: string
+          intake_form_id?: string
+          is_active?: boolean
+          stage_completed_at?: string | null
+          stage_notes?: string | null
+          stage_started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_workflows_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_trails: {
         Row: {
           action: string
@@ -123,6 +220,53 @@ export type Database = {
           },
         ]
       }
+      compliance_reports: {
+        Row: {
+          checklist_results: Json
+          critical_flags: number | null
+          generated_at: string
+          id: string
+          intake_form_id: string
+          overall_score: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          user_id: string
+          warning_flags: number | null
+        }
+        Insert: {
+          checklist_results?: Json
+          critical_flags?: number | null
+          generated_at?: string
+          id?: string
+          intake_form_id: string
+          overall_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id: string
+          warning_flags?: number | null
+        }
+        Update: {
+          checklist_results?: Json
+          critical_flags?: number | null
+          generated_at?: string
+          id?: string
+          intake_form_id?: string
+          overall_score?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string
+          warning_flags?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_reports_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       file_attachments: {
         Row: {
           created_at: string
@@ -157,6 +301,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "file_attachments_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_documents: {
+        Row: {
+          approval_notes: string | null
+          document_type: string
+          file_path: string
+          generated_at: string
+          generated_by: string
+          id: string
+          intake_form_id: string
+          status: string
+          template_used: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          approval_notes?: string | null
+          document_type: string
+          file_path: string
+          generated_at?: string
+          generated_by: string
+          id?: string
+          intake_form_id: string
+          status?: string
+          template_used: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          approval_notes?: string | null
+          document_type?: string
+          file_path?: string
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          intake_form_id?: string
+          status?: string
+          template_used?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_intake_form_id_fkey"
             columns: ["intake_form_id"]
             isOneToOne: false
             referencedRelation: "intake_forms"
