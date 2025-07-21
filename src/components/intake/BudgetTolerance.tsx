@@ -17,9 +17,9 @@ interface BudgetToleranceProps {
 }
 
 export const BudgetTolerance = ({ formData, onUpdate }: BudgetToleranceProps) => {
-  const [estimatedValue, setEstimatedValue] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const estimatedValue = formData.estimatedValue ? parseFloat(formData.estimatedValue) : null;
+  const startDate = formData.startDate ? new Date(formData.startDate) : undefined;
+  const endDate = formData.endDate ? new Date(formData.endDate) : undefined;
 
   const budgetLabels = {
     sensitive: "Budget Sensitive",
@@ -103,7 +103,7 @@ export const BudgetTolerance = ({ formData, onUpdate }: BudgetToleranceProps) =>
               type="number"
               placeholder="e.g., 150000"
               value={estimatedValue || ""}
-              onChange={(e) => setEstimatedValue(e.target.value ? parseFloat(e.target.value) : null)}
+              onChange={(e) => onUpdate({ estimatedValue: e.target.value })}
             />
           </div>
 
@@ -156,8 +156,7 @@ export const BudgetTolerance = ({ formData, onUpdate }: BudgetToleranceProps) =>
                   mode="single"
                   selected={startDate}
                   onSelect={(date) => {
-                    setStartDate(date);
-                    onUpdate({ startDate: date?.toISOString() || "" });
+                    onUpdate({ startDate: date?.toISOString().split('T')[0] || "" });
                   }}
                   disabled={(date) => date < new Date()}
                   initialFocus
@@ -184,8 +183,7 @@ export const BudgetTolerance = ({ formData, onUpdate }: BudgetToleranceProps) =>
                   mode="single"
                   selected={endDate}
                   onSelect={(date) => {
-                    setEndDate(date);
-                    onUpdate({ endDate: date?.toISOString() || "" });
+                    onUpdate({ endDate: date?.toISOString().split('T')[0] || "" });
                   }}
                   disabled={(date) => date < (startDate || new Date())}
                   initialFocus
