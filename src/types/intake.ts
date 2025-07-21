@@ -29,8 +29,10 @@ export interface Requirements {
 }
 
 export interface IntakeFormData {
+  title?: string;
   background: string;
   commodityType: string;
+  estimatedValue?: string;
   deliverables: Deliverable[];
   tasks: Task[];
   startDate: string;

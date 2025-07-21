@@ -14,8 +14,10 @@ import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export const RFxIntakeForm = () => {
   const [formData, setFormData] = useState<IntakeFormData>({
+    title: "",
     background: "",
     commodityType: "",
+    estimatedValue: "",
     deliverables: [],
     tasks: [],
     startDate: "",
@@ -151,6 +153,102 @@ export const RFxIntakeForm = () => {
         </TabsList>
         
         <TabsContent value="chat" className="space-y-4">
+          {/* Basic Project Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Information</CardTitle>
+              <CardDescription>
+                Provide basic details about your procurement request
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="title" className="text-sm font-medium">
+                    Project Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="title"
+                    type="text"
+                    placeholder="e.g., Health Outcome Data Analytics - Q1 2025"
+                    value={formData.title || ""}
+                    onChange={(e) => updateFormData({ title: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="estimatedValue" className="text-sm font-medium">
+                    Estimated Value (CAD) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="estimatedValue"
+                    type="number"
+                    placeholder="e.g., 150000"
+                    value={formData.estimatedValue || ""}
+                    onChange={(e) => updateFormData({ estimatedValue: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="commodityType" className="text-sm font-medium">
+                  Commodity Type <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="commodityType"
+                  type="text"
+                  placeholder="e.g., Professional Services - Data Analytics"
+                  value={formData.commodityType}
+                  onChange={(e) => updateFormData({ commodityType: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="startDate" className="text-sm font-medium">
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => updateFormData({ startDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="endDate" className="text-sm font-medium">
+                    End Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => updateFormData({ endDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="background" className="text-sm font-medium">
+                  Background & Problem Statement <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="background"
+                  placeholder="Describe the background or problem you're trying to solve..."
+                  value={formData.background}
+                  onChange={(e) => updateFormData({ background: e.target.value })}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI-Assisted Scope Development */}
           <Card>
             <CardHeader>
               <CardTitle>AI-Assisted Scope Development</CardTitle>
