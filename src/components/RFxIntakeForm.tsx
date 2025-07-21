@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScopeChat } from "./intake/ScopeChat";
 import { RequirementsWizard } from "./intake/RequirementsWizard";
 import { BudgetTolerance } from "./intake/BudgetTolerance";
@@ -153,6 +155,97 @@ export const RFxIntakeForm = () => {
         </TabsList>
         
         <TabsContent value="chat" className="space-y-4">
+          {/* Basic Project Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Information</CardTitle>
+              <CardDescription>
+                Provide basic details about your procurement request
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">
+                    Project Title <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    type="text"
+                    placeholder="e.g., AI-Powered Patient Flow Analytics Platform"
+                    value={formData.title || ""}
+                    onChange={(e) => updateFormData({ title: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedValue">
+                    Estimated Value (CAD) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="estimatedValue"
+                    type="number"
+                    placeholder="e.g., 180000"
+                    value={formData.estimatedValue || ""}
+                    onChange={(e) => updateFormData({ estimatedValue: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="commodityType">
+                  Commodity Type <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="commodityType"
+                  type="text"
+                  placeholder="e.g., Professional Services"
+                  value={formData.commodityType}
+                  onChange={(e) => updateFormData({ commodityType: e.target.value })}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">
+                    Start Date <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => updateFormData({ startDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">
+                    End Date <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => updateFormData({ endDate: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="background">
+                  Background & Problem Statement <span className="text-destructive">*</span>
+                </Label>
+                <textarea
+                  id="background"
+                  placeholder="Describe the background or problem you're trying to solve..."
+                  value={formData.background}
+                  onChange={(e) => updateFormData({ background: e.target.value })}
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI-Assisted Scope Development */}
           <Card>
             <CardHeader>
               <CardTitle>AI-Assisted Scope Development</CardTitle>
