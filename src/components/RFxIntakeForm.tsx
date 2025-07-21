@@ -158,37 +158,23 @@ export const RFxIntakeForm = () => {
           {/* Basic Project Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Project Information</CardTitle>
+              <CardTitle>Project Definition</CardTitle>
               <CardDescription>
-                Provide basic details about your procurement request
+                Define your project's core identity and business context
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">
-                    Project Title <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="title"
-                    type="text"
-                    placeholder="e.g., AI-Powered Patient Flow Analytics Platform"
-                    value={formData.title || ""}
-                    onChange={(e) => updateFormData({ title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="estimatedValue">
-                    Estimated Value (CAD) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="estimatedValue"
-                    type="number"
-                    placeholder="e.g., 180000"
-                    value={formData.estimatedValue || ""}
-                    onChange={(e) => updateFormData({ estimatedValue: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="title">
+                  Project Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  type="text"
+                  placeholder="e.g., AI-Powered Patient Flow Analytics Platform"
+                  value={formData.title || ""}
+                  onChange={(e) => updateFormData({ title: e.target.value })}
+                />
               </div>
               
               <div className="space-y-2">
@@ -204,38 +190,13 @@ export const RFxIntakeForm = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">
-                    Start Date <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => updateFormData({ startDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">
-                    End Date <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => updateFormData({ endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="background">
                   Background & Problem Statement <span className="text-destructive">*</span>
                 </Label>
                 <textarea
                   id="background"
-                  placeholder="Describe the background or problem you're trying to solve..."
+                  placeholder="Describe the business problem, current state, and desired outcomes..."
                   value={formData.background}
                   onChange={(e) => updateFormData({ background: e.target.value })}
                   rows={4}
@@ -250,8 +211,7 @@ export const RFxIntakeForm = () => {
             <CardHeader>
               <CardTitle>AI-Assisted Scope Development</CardTitle>
               <CardDescription>
-                Define your project scope through intelligent conversation. Our AI will guide you through 
-                project details, requirements, and ensure compliance with Canadian procurement regulations.
+                Collaborate with AI to refine requirements, identify stakeholders, and ensure procurement compliance
               </CardDescription>
             </CardHeader>
             <CardContent>
