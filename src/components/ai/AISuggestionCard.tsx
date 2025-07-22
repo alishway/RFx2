@@ -199,6 +199,91 @@ export const AISuggestionCard: React.FC<AISuggestionCardProps> = ({
       );
     }
 
+    if (suggestion.sectionType === 'timeline') {
+      return (
+        <div className="space-y-2">
+          <Label>Timeline Description</Label>
+          {isEditing ? (
+            <Textarea
+              value={content.description || ''}
+              onChange={(e) => setEditedContent({ ...content, description: e.target.value })}
+              placeholder="Enter timeline description"
+              rows={2}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{content.description}</p>
+          )}
+          
+          {content.suggestedDuration && (
+            <>
+              <Label>Suggested Duration</Label>
+              {isEditing ? (
+                <Input
+                  value={content.suggestedDuration || ''}
+                  onChange={(e) => setEditedContent({ ...content, suggestedDuration: e.target.value })}
+                  placeholder="e.g., 3 months, 12 weeks"
+                />
+              ) : (
+                <p className="text-sm font-medium">{content.suggestedDuration}</p>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    if (suggestion.sectionType === 'budget') {
+      return (
+        <div className="space-y-2">
+          <Label>Budget Description</Label>
+          {isEditing ? (
+            <Textarea
+              value={content.description || ''}
+              onChange={(e) => setEditedContent({ ...content, description: e.target.value })}
+              placeholder="Enter budget description"
+              rows={2}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">{content.description}</p>
+          )}
+          
+          {content.suggestedRange && (
+            <>
+              <Label>Suggested Range</Label>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={content.suggestedRange.min || ''}
+                    onChange={(e) => setEditedContent({ 
+                      ...content, 
+                      suggestedRange: { ...content.suggestedRange, min: parseFloat(e.target.value) }
+                    })}
+                    placeholder="Min amount"
+                  />
+                  <Input
+                    type="number"
+                    value={content.suggestedRange.max || ''}
+                    onChange={(e) => setEditedContent({ 
+                      ...content, 
+                      suggestedRange: { ...content.suggestedRange, max: parseFloat(e.target.value) }
+                    })}
+                    placeholder="Max amount"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm font-medium">
+                  {content.suggestedRange.min && `$${content.suggestedRange.min.toLocaleString()}`}
+                  {content.suggestedRange.min && content.suggestedRange.max && ' - '}
+                  {content.suggestedRange.max && `$${content.suggestedRange.max.toLocaleString()}`}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
     // Fallback for other content types
     return (
       <div className="space-y-2">

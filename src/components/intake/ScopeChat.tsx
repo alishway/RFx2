@@ -7,6 +7,7 @@ import { Send, User, Bot, Loader2, CheckCircle } from "lucide-react";
 import { ChatMessage, IntakeFormData, Deliverable } from "@/types/intake";
 import { AISuggestion, SuggestionExtractionResult } from "@/types/aiSuggestions";
 import { AISuggestionsService } from "@/services/aiSuggestionsService";
+import { SuggestionExtractionService } from "@/services/suggestionExtractionService";
 import { AISuggestionCard } from "@/components/ai/AISuggestionCard";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -202,39 +203,8 @@ Could you provide more specific details about the deliverables you need?`;
 
   // Enhanced AI suggestion extraction for multiple sections
   const extractSuggestionsFromMessage = (message: string): SuggestionExtractionResult[] => {
-    const results: SuggestionExtractionResult[] = [];
-    
-    // Extract deliverables
-    const deliverables = extractDeliverablesFromMessage(message);
-    if (deliverables.length > 0) {
-      results.push({
-        sectionType: 'deliverables',
-        items: deliverables,
-        confidence: 0.8
-      });
-    }
-
-    // Extract mandatory criteria
-    const mandatoryCriteria = extractMandatoryCriteria(message);
-    if (mandatoryCriteria.length > 0) {
-      results.push({
-        sectionType: 'mandatory_criteria',
-        items: mandatoryCriteria,
-        confidence: 0.7
-      });
-    }
-
-    // Extract rated criteria
-    const ratedCriteria = extractRatedCriteria(message);
-    if (ratedCriteria.length > 0) {
-      results.push({
-        sectionType: 'rated_criteria',
-        items: ratedCriteria,
-        confidence: 0.7
-      });
-    }
-
-    return results;
+    // Use enhanced extraction service
+    return SuggestionExtractionService.extractSuggestions(message);
   };
 
   const extractDeliverablesFromMessage = (message: string): Deliverable[] => {

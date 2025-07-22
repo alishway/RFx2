@@ -11,8 +11,10 @@ import { BudgetTolerance } from "./intake/BudgetTolerance";
 import { FileUpload } from "./intake/FileUpload";
 import { IntakeFormData } from "@/types/intake";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
+import { AISuggestionsDashboard } from "@/components/ai/AISuggestionsDashboard";
+import { SuggestionReviewPanel } from "@/components/ai/SuggestionReviewPanel";
 import { useToast } from "@/hooks/use-toast";
-import { Save, AlertCircle, CheckCircle2, Package, X } from "lucide-react";
+import { Save, AlertCircle, CheckCircle2, Package, X, Brain } from "lucide-react";
 
 export const RFxIntakeForm = () => {
   const [formData, setFormData] = useState<IntakeFormData>({
@@ -153,11 +155,15 @@ export const RFxIntakeForm = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="chat">Scope Development</TabsTrigger>
           <TabsTrigger value="requirements">Selection Criteria</TabsTrigger>
           <TabsTrigger value="budget">Budget & Timeline</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="ai-dashboard" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            AI Dashboard
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="chat" className="space-y-4">
@@ -326,6 +332,28 @@ export const RFxIntakeForm = () => {
             attachments={formData.attachments}
             onAttachmentsChange={(files) => updateFormData({ attachments: files })}
           />
+        </TabsContent>
+
+        <TabsContent value="ai-dashboard" className="space-y-4">
+          {savedForm?.id ? (
+            <AISuggestionsDashboard 
+              intakeFormId={savedForm.id}
+              onSuggestionUpdate={() => {
+                // Refresh form data if needed
+                console.log('AI suggestion updated');
+              }}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="text-muted-foreground">
+                  <Brain className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm mb-2">Save your form first to access AI suggestions</p>
+                  <p className="text-xs">AI suggestions will appear here once you've saved your intake form</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
