@@ -282,11 +282,31 @@ export const RFxIntakeForm = () => {
               {formData.deliverables && formData.deliverables.length > 0 ? (
                 <div className="space-y-3">
                   {formData.deliverables.map((deliverable, index) => (
-                    <div key={deliverable.id} className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{index + 1}. {deliverable.name}</div>
-                        <div className="text-xs text-muted-foreground mt-1">{deliverable.description}</div>
-                      </div>
+                     <div key={deliverable.id} className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
+                       <div className="flex-1 space-y-2">
+                         <Input
+                           value={deliverable.name}
+                           onChange={(e) => {
+                             const updated = formData.deliverables?.map(d => 
+                               d.id === deliverable.id ? { ...d, name: e.target.value } : d
+                             ) || [];
+                             updateFormData({ deliverables: updated });
+                           }}
+                           className="font-medium text-sm border-0 p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                           placeholder="Deliverable name"
+                         />
+                         <Input
+                           value={deliverable.description}
+                           onChange={(e) => {
+                             const updated = formData.deliverables?.map(d => 
+                               d.id === deliverable.id ? { ...d, description: e.target.value } : d
+                             ) || [];
+                             updateFormData({ deliverables: updated });
+                           }}
+                           className="text-xs text-muted-foreground border-0 p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                           placeholder="Describe what needs to be delivered"
+                         />
+                       </div>
                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
                            {deliverable.selected ? "Included" : "Optional"}

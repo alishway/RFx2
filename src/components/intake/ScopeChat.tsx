@@ -10,6 +10,7 @@ import { AISuggestionsService } from "@/services/aiSuggestionsService";
 import { SuggestionExtractionService } from "@/services/suggestionExtractionService";
 import { AISuggestionCard } from "@/components/ai/AISuggestionCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useChatContext } from "@/contexts/ChatContext";
 
 interface ScopeChatProps {
   formData: IntakeFormData;
@@ -18,25 +19,36 @@ interface ScopeChatProps {
 }
 
 export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Hello! I'm your AI procurement assistant. I'll help you define project scope, identify deliverables, and ensure compliance with procurement regulations.\n\nTo get started, tell me about your project. For example:\n• What problem are you trying to solve?\n• What deliverables do you need?\n• What's your timeline and budget range?",
-      timestamp: new Date(),
-      suggestions: [
-        "I need data analysis services", 
-        "Define project deliverables", 
-        "Set project timeline",
-        "Review procurement compliance"
-      ]
-    }
-  ]);
+  const { 
+    messages, 
+    setMessages, 
+    pendingSuggestions, 
+    setPendingSuggestions, 
+    isLoading, 
+    setIsLoading 
+  } = useChatContext();
+  
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [pendingSuggestions, setPendingSuggestions] = useState<AISuggestion[]>([]);
   const [isProcessingSuggestions, setIsProcessingSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load existing suggestions when formId changes
+  useEffect(() => {
+    const loadExistingSuggestions = async () => {
+      if (!formId) return;
+      
+      try {
+        const { data: suggestions, error } = await AISuggestionsService.getSuggestionsForForm(formId);
+        if (!error && suggestions) {
+          setPendingSuggestions(suggestions.filter(s => s.status === 'pending'));
+        }
+      } catch (error) {
+        console.error('Error loading existing suggestions:', error);
+      }
+    };
+
+    loadExistingSuggestions();
+  }, [formId, setPendingSuggestions]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -308,10 +320,59 @@ Could you provide more specific details about the deliverables you need?`;
     }
   };
 
-  const handleSuggestionAccept = (suggestionId: string, content: any) => {
-    // Remove from pending and update form data
-    setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-    // TODO: Update actual form data based on accepted suggestion
+  const handleSuggestionAccept = async (suggestionId: string, content: any) => {
+    try {
+      // Find the suggestion to process
+      const suggestion = pendingSuggestions.find(s => s.id === suggestionId);
+      if (!suggestion) return;
+
+      // Update suggestion status to accepted
+      await AISuggestionsService.updateSuggestionStatus(suggestionId, 'accepted');
+      
+      // Process the content based on suggestion type
+      if (suggestion.sectionType === 'deliverables' && content.deliverables) {
+        const currentDeliverables = formData.deliverables || [];
+        const newDeliverables = [...currentDeliverables, ...content.deliverables];
+        onUpdate({ deliverables: newDeliverables });
+      } else if (suggestion.sectionType === 'mandatory_criteria' && content.criteria) {
+        const currentRequirements = formData.requirements || {
+          mandatory: [],
+          rated: [],
+          priceWeight: 60
+        };
+        const updatedRequirements = {
+          ...currentRequirements,
+          mandatory: [...currentRequirements.mandatory, ...content.criteria]
+        };
+        onUpdate({ requirements: updatedRequirements });
+      } else if (suggestion.sectionType === 'rated_criteria' && content.criteria) {
+        const currentRequirements = formData.requirements || {
+          mandatory: [],
+          rated: [],
+          priceWeight: 60
+        };
+        const updatedRequirements = {
+          ...currentRequirements,
+          rated: [...currentRequirements.rated, ...content.criteria]
+        };
+        onUpdate({ requirements: updatedRequirements });
+      }
+
+      // Remove from pending
+      setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+      
+      // Add confirmation message
+      const confirmationMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `✅ Successfully added ${suggestion.sectionType.replace('_', ' ')} to your form! You can see and edit them in the appropriate section below.`,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, confirmationMessage]);
+    } catch (error) {
+      console.error('Error accepting suggestion:', error);
+    }
   };
 
   const handleSuggestionReject = (suggestionId: string) => {
