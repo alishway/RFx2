@@ -82,6 +82,24 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     }
   };
 
+  const handleConfirmDeliverables = (deliverables: any[]) => {
+    const currentDeliverables = formData.deliverables || [];
+    const newDeliverables = [...currentDeliverables];
+    
+    deliverables.forEach(newDel => {
+      if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
+        newDeliverables.push(newDel);
+      }
+    });
+    
+    onUpdate({ deliverables: newDeliverables });
+    
+    toast({
+      title: "Deliverables Added",
+      description: `${deliverables.length} deliverable${deliverables.length > 1 ? 's' : ''} added to your form`,
+    });
+  };
+
   const generateAIResponse = async (userMessage: string, formData: IntakeFormData, conversationHistory: ChatMessage[]): Promise<ChatMessage> => {
     try {
       const { data, error } = await supabase.functions.invoke('ai-scope-chat', {
@@ -111,11 +129,29 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
-    // Simple response generation as fallback
+    // Extract potential deliverables from user message
+    const extractedDeliverables = extractDeliverablesFromMessage(userMessage);
+    
     let response = "";
     let suggestions: string[] = [];
     
-    if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
+    // Check if user mentioned deliverables
+    if (extractedDeliverables.length > 0 && 
+        (userMessage.toLowerCase().includes('deliverable') || 
+         userMessage.toLowerCase().includes('need') || 
+         userMessage.toLowerCase().includes('require'))) {
+      
+      response = `I identified ${extractedDeliverables.length} potential deliverable${extractedDeliverables.length > 1 ? 's' : ''} from your message:\n\n`;
+      
+      extractedDeliverables.forEach((del, index) => {
+        response += `${index + 1}. **${del.name}**\n`;
+      });
+      
+      response += `\nWould you like me to add these deliverables to your procurement form? I can also help you refine the descriptions or add additional details.`;
+      
+      suggestions = ['Yes, add these deliverables', 'Let me refine them first', 'Add more deliverables'];
+      
+    } else if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
       response = "I see you're looking for data analysis services. Let me help you define the specific deliverables. Are you looking for:\n\n• Data collection and cleansing\n• Statistical analysis and modeling\n• Data visualization and reporting\n• Business intelligence solutions";
       suggestions = ['Data collection', 'Statistical modeling', 'Data visualization', 'All of the above'];
     } else if (userMessage.toLowerCase().includes('it') || userMessage.toLowerCase().includes('technology')) {
@@ -137,7 +173,8 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
       role: 'assistant',
       content: response,
       timestamp: new Date(),
-      suggestions
+      suggestions,
+      extractedDeliverables: extractedDeliverables.length > 0 ? extractedDeliverables : undefined
     };
   };
 
@@ -159,47 +196,57 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     return flags;
   };
 
-  const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
-    // Extract deliverables from user message
-    const deliverablePatterns = [
-      /['"]([^'"]*report[^'"]*)['"]/gi,
-      /['"]([^'"]*dashboard[^'"]*)['"]/gi,
-      /['"]([^'"]*session[^'"]*)['"]/gi,
-      /['"]([^'"]*analysis[^'"]*)['"]/gi,
-      /['"]([^'"]*deliverable[^'"]*)['"]/gi
-    ];
+  const extractDeliverablesFromMessage = (message: string): any[] => {
+    const deliverables: any[] = [];
     
-    const extractedDeliverables: any[] = [];
+    // Pattern for numbered lists (1. 2. etc.)
+    const numberedPattern = /(\d+)\.?\s*([^,;\n]+?)(?=[,;\n]|\d+\.|$)/gi;
+    let match;
     
-    deliverablePatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(message)) !== null) {
-        const name = match[1].trim();
-        if (name && !extractedDeliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-          extractedDeliverables.push({
-            id: Math.random().toString(36).substr(2, 9),
-            name: name,
-            description: `Deliverable: ${name}`,
-            selected: true
-          });
-        }
+    while ((match = numberedPattern.exec(message)) !== null) {
+      const name = match[2].trim().replace(/['"]/g, '');
+      if (name.length > 3) { // Filter out very short matches
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
       }
-    });
-    
-    // If deliverables were found, add them to existing deliverables
-    if (extractedDeliverables.length > 0) {
-      const currentDeliverables = formData.deliverables || [];
-      const newDeliverables = [...currentDeliverables];
-      
-      extractedDeliverables.forEach(newDel => {
-        if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
-          newDeliverables.push(newDel);
-        }
-      });
-      
-      onUpdate({ deliverables: newDeliverables });
     }
     
+    // Pattern for bullet points (-, *, •)
+    const bulletPattern = /[•\-\*]\s*([^,;\n]+?)(?=[,;\n]|[•\-\*]|$)/gi;
+    while ((match = bulletPattern.exec(message)) !== null) {
+      const name = match[1].trim().replace(/['"]/g, '');
+      if (name.length > 3 && !deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
+      }
+    }
+    
+    // Pattern for quoted items
+    const quotedPattern = /['"]([^'"]{4,})['"]/gi;
+    while ((match = quotedPattern.exec(message)) !== null) {
+      const name = match[1].trim();
+      if (!deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
+      }
+    }
+    
+    return deliverables;
+  };
+
+  const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
     // Extract commodity type
     if (message.toLowerCase().includes('data analysis') && !formData.commodityType) {
       onUpdate({ commodityType: 'Data Analysis Services' });
@@ -231,9 +278,36 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
                   </div>
                 )}
               </div>
-              <Card className={message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}>
+                <Card className={message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}>
                 <CardContent className="p-3">
                   <p className="whitespace-pre-wrap">{message.content}</p>
+                  
+                  {/* Show extracted deliverables for confirmation */}
+                  {(message as any).extractedDeliverables && (message as any).extractedDeliverables.length > 0 && (
+                    <div className="mt-4 p-3 bg-secondary/20 rounded-lg border">
+                      <h4 className="font-medium mb-2">Extracted Deliverables:</h4>
+                      <div className="space-y-1 mb-3">
+                        {(message as any).extractedDeliverables.map((del: any, idx: number) => (
+                          <div key={idx} className="text-sm">• {del.name}</div>
+                        ))}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
+                        className="mr-2"
+                      >
+                        Add to Form
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleSend("Let me refine these deliverables")}
+                      >
+                        Refine
+                      </Button>
+                    </div>
+                  )}
+                  
                   {message.suggestions && message.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {message.suggestions.map((suggestion, index) => (
