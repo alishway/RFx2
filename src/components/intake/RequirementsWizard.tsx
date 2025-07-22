@@ -206,24 +206,22 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
             <div className="flex justify-between items-center">
               <CardTitle>Rated Criteria</CardTitle>
               {formData.requirements.rated.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={redistributeWeights}
-                        className="text-xs"
-                      >
-                        <Calculator className="w-3 h-3 mr-1" />
-                        Auto-Balance
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Distribute weights equally among all rated criteria</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={redistributeWeights}
+                      className="text-xs"
+                    >
+                      <Calculator className="w-3 h-3 mr-1" />
+                      Auto-Balance
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Distribute weights equally among all rated criteria</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </CardHeader>
@@ -242,42 +240,38 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">{req.description}</p>
                 <div className="flex gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="cursor-help">
-                          Weight: {req.weight}%
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-sm">
-                          <p><strong>Evaluation Weight</strong></p>
-                          <p>Importance of this criterion in the overall evaluation</p>
-                          <p>All rated criteria weights + price weight must = 100%</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="secondary" className="cursor-help">
+                        Weight: {req.weight}%
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-sm">
+                        <p><strong>Evaluation Weight</strong></p>
+                        <p>Importance of this criterion in the overall evaluation</p>
+                        <p>All rated criteria weights + price weight must = 100%</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                   
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="outline" className="cursor-help">
-                          Scale: {req.scale}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-sm">
-                          <p><strong>Scoring Scale (0-4 points)</strong></p>
-                          <p>0 = Does not meet requirement</p>
-                          <p>1 = Minimally meets requirement</p>
-                          <p>2 = Adequately meets requirement</p>
-                          <p>3 = Exceeds requirement</p>
-                          <p>4 = Significantly exceeds requirement</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="cursor-help">
+                        Scale: {req.scale}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-sm">
+                        <p><strong>Scoring Scale (0-4 points)</strong></p>
+                        <p>0 = Does not meet requirement</p>
+                        <p>1 = Minimally meets requirement</p>
+                        <p>2 = Adequately meets requirement</p>
+                        <p>3 = Exceeds requirement</p>
+                        <p>4 = Significantly exceeds requirement</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             ))}
@@ -368,16 +362,14 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Weight Distribution
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>All weights must total exactly 100%</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>All weights must total exactly 100%</p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
           </CardHeader>
           <CardContent>
