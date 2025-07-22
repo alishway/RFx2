@@ -12,7 +12,7 @@ import { FileUpload } from "./intake/FileUpload";
 import { IntakeFormData } from "@/types/intake";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
 import { useToast } from "@/hooks/use-toast";
-import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Save, AlertCircle, CheckCircle2, Package, X } from "lucide-react";
 
 export const RFxIntakeForm = () => {
   const [formData, setFormData] = useState<IntakeFormData>({
@@ -220,31 +220,64 @@ export const RFxIntakeForm = () => {
           </Card>
 
           {/* Deliverables Summary */}
-          {formData.deliverables && formData.deliverables.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Identified Deliverables</CardTitle>
-                <CardDescription>
-                  These deliverables have been extracted from your conversations above
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Identified Deliverables
+                {formData.deliverables && formData.deliverables.length > 0 && (
+                  <Badge variant="secondary">{formData.deliverables.length}</Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {formData.deliverables && formData.deliverables.length > 0 
+                  ? "AI has identified these deliverables from your chat. Click to edit or remove."
+                  : "No deliverables identified yet. Use the AI chat above to define your project deliverables."
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {formData.deliverables && formData.deliverables.length > 0 ? (
                 <div className="space-y-3">
                   {formData.deliverables.map((deliverable, index) => (
-                    <div key={deliverable.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={deliverable.id} className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
                       <div className="flex-1">
-                        <div className="font-medium">{index + 1}. {deliverable.name}</div>
-                        <div className="text-sm text-muted-foreground">{deliverable.description}</div>
+                        <div className="font-medium text-sm">{index + 1}. {deliverable.name}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{deliverable.description}</div>
                       </div>
-                      <Badge variant={deliverable.selected ? "default" : "secondary"}>
-                        {deliverable.selected ? "Included" : "Optional"}
-                      </Badge>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
+                          {deliverable.selected ? "Included" : "Optional"}
+                        </Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            const updated = formData.deliverables?.filter(d => d.id !== deliverable.id) || [];
+                            updateFormData({ deliverables: updated });
+                          }}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
+                  <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      💡 <strong>Tip:</strong> Continue chatting with AI to refine or add more deliverables. All changes are auto-saved.
+                    </p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm mb-2">No deliverables defined yet</p>
+                  <p className="text-xs">Use the AI chat above to describe what you need delivered</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="requirements" className="space-y-4">

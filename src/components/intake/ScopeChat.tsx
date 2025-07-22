@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, AlertTriangle } from "lucide-react";
-import { ChatMessage, IntakeFormData } from "@/types/intake";
-import { useToast } from "@/hooks/use-toast";
+import { Send, User, Bot, Loader2, CheckCircle } from "lucide-react";
+import { ChatMessage, IntakeFormData, Deliverable } from "@/types/intake";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ScopeChatProps {
@@ -16,23 +15,21 @@ interface ScopeChatProps {
 export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m here to help you develop your procurement scope. Let\'s start with understanding what you need. Can you describe the background or problem you\'re trying to solve?',
+      id: "welcome",
+      role: "assistant",
+      content: "Hello! I'm your AI procurement assistant. I'll help you define project scope, identify deliverables, and ensure compliance with procurement regulations.\n\nTo get started, tell me about your project. For example:\n• What problem are you trying to solve?\n• What deliverables do you need?\n• What's your timeline and budget range?",
       timestamp: new Date(),
       suggestions: [
-        'We need data analysis services',
-        'Looking for IT consulting',
-        'Require professional services',
-        'Need construction services'
+        "I need data analysis services", 
+        "Define project deliverables", 
+        "Set project timeline",
+        "Review procurement compliance"
       ]
     }
   ]);
-  
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,13 +40,13 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   }, [messages]);
 
   const handleSend = async (message?: string) => {
-    const messageText = message || input.trim();
-    if (!messageText) return;
+    const messageToSend = message || input.trim();
+    if (!messageToSend || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
-      content: messageText,
+      role: "user",
+      content: messageToSend,
       timestamp: new Date()
     };
 
@@ -58,46 +55,42 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
-      // Call AI edge function
-      const aiResponse = await generateAIResponse(messageText, formData, messages);
+      const aiResponse = await generateAIResponse(messageToSend, formData, messages);
+      
+      // Extract deliverables from AI response if any
+      const extractedDeliverables = extractDeliverablesFromMessage(messageToSend);
+      if (extractedDeliverables.length > 0) {
+        aiResponse.extractedDeliverables = extractedDeliverables;
+      }
       
       setMessages(prev => [...prev, aiResponse]);
       
-      // Update form data based on AI extraction
-      updateFormDataFromMessage(messageText, onUpdate);
+      // Auto-update form data based on message
+      updateFormDataFromMessage(messageToSend, onUpdate);
       
     } catch (error) {
       console.error('AI response error:', error);
-      // Fallback to local response
-      const fallbackResponse = generateFallbackResponse(messageText, formData);
+      const fallbackResponse = generateFallbackResponse(messageToSend, formData);
       setMessages(prev => [...prev, fallbackResponse]);
-      
-      toast({
-        title: "AI Temporarily Unavailable",
-        description: "Using fallback response. AI features will return shortly.",
-        variant: "default"
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConfirmDeliverables = (deliverables: any[]) => {
+  const handleConfirmDeliverables = (deliverables: Deliverable[]) => {
     const currentDeliverables = formData.deliverables || [];
-    const newDeliverables = [...currentDeliverables];
-    
-    deliverables.forEach(newDel => {
-      if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
-        newDeliverables.push(newDel);
-      }
-    });
-    
+    const newDeliverables = [...currentDeliverables, ...deliverables];
     onUpdate({ deliverables: newDeliverables });
     
-    toast({
-      title: "Deliverables Added",
-      description: `${deliverables.length} deliverable${deliverables.length > 1 ? 's' : ''} added to your form`,
-    });
+    // Add confirmation message
+    const confirmationMessage: ChatMessage = {
+      id: Math.random().toString(36).substr(2, 9),
+      role: 'assistant',
+      content: `✅ Successfully added ${deliverables.length} deliverable(s) to your form! You can see them in the "Identified Deliverables" section below and modify them anytime.`,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
   };
 
   const generateAIResponse = async (userMessage: string, formData: IntakeFormData, conversationHistory: ChatMessage[]): Promise<ChatMessage> => {
@@ -118,60 +111,49 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
       return {
         id: Date.now().toString(),
         role: 'assistant',
-        content: data.response,
+        content: data.response || "I understand. Let me help you with that.",
         timestamp: new Date(),
-        suggestions: data.suggestions || []
+        suggestions: data.suggestions || ["Define project timeline", "Set budget parameters", "Add evaluation criteria"]
       };
     } catch (error) {
-      console.error('AI response error:', error);
+      console.error('Error calling AI function:', error);
       throw error;
     }
   };
 
   const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
-    // Extract potential deliverables from user message
     const extractedDeliverables = extractDeliverablesFromMessage(userMessage);
     
-    let response = "";
-    let suggestions: string[] = [];
+    let suggestions = ['Define project timeline', 'Set budget parameters', 'Add evaluation criteria'];
     
-    // Check if user mentioned deliverables
-    if (extractedDeliverables.length > 0 && 
-        (userMessage.toLowerCase().includes('deliverable') || 
-         userMessage.toLowerCase().includes('need') || 
-         userMessage.toLowerCase().includes('require'))) {
-      
-      response = `I identified ${extractedDeliverables.length} potential deliverable${extractedDeliverables.length > 1 ? 's' : ''} from your message:\n\n`;
-      
-      extractedDeliverables.forEach((del, index) => {
-        response += `${index + 1}. **${del.name}**\n`;
-      });
-      
-      response += `\nWould you like me to add these deliverables to your procurement form? I can also help you refine the descriptions or add additional details.`;
-      
-      suggestions = ['Yes, add these deliverables', 'Let me refine them first', 'Add more deliverables'];
-      
-    } else if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
-      response = "I see you're looking for data analysis services. Let me help you define the specific deliverables. Are you looking for:\n\n• Data collection and cleansing\n• Statistical analysis and modeling\n• Data visualization and reporting\n• Business intelligence solutions";
-      suggestions = ['Data collection', 'Statistical modeling', 'Data visualization', 'All of the above'];
-    } else if (userMessage.toLowerCase().includes('it') || userMessage.toLowerCase().includes('technology')) {
-      response = "Great! For IT services, let's identify the key areas. Common deliverables include:\n\n• System design and architecture\n• Software development\n• Infrastructure management\n• Security assessment";
-      suggestions = ['System design', 'Software development', 'Infrastructure', 'Security'];
-    } else {
-      response = "Thank you for that information. To ensure we capture all requirements, could you help me understand:\n\n1. What specific deliverables do you expect?\n2. What's your target timeline?\n3. Are there any special requirements or constraints?";
-      suggestions = ['Define deliverables', 'Set timeline', 'Add constraints'];
-    }
-
     // Check for restrictive language
-    const restrictiveFlags = checkRestrictiveLanguage(userMessage);
-    if (restrictiveFlags.length > 0) {
-      response += `\n\n⚠️ **Compliance Alert**: I noticed some potentially restrictive requirements: ${restrictiveFlags.join(', ')}. Let's ensure these meet fairness and openness requirements.`;
+    const restrictiveTerms = checkRestrictiveLanguage(userMessage);
+    if (restrictiveTerms.length > 0) {
+      suggestions = ['Revise language to be vendor-neutral', 'Review procurement compliance', 'Clarify requirements'];
     }
+    
+    let responseContent = '';
+    
+    if (extractedDeliverables.length > 0) {
+      responseContent = `Perfect! I've identified ${extractedDeliverables.length} deliverable(s) from your message:
 
+${extractedDeliverables.map((d, i) => `${i + 1}. ${d.name}`).join('\n')}
+
+Would you like me to add these to your form? You can review and modify them later in the "Identified Deliverables" section below.`;
+    } else {
+      responseContent = `I understand you want to define deliverables for your procurement. To help extract specific deliverables, try formatting them as:
+
+• Numbered list (1. Monthly reports, 2. Dashboard, etc.)
+• Bullet points (- Report, - Analysis, etc.) 
+• Quoted items ("Final report", "Training sessions")
+
+Could you provide more specific details about the deliverables you need?`;
+    }
+    
     return {
-      id: Date.now().toString(),
+      id: Math.random().toString(36).substr(2, 9),
       role: 'assistant',
-      content: response,
+      content: responseContent,
       timestamp: new Date(),
       suggestions,
       extractedDeliverables: extractedDeliverables.length > 0 ? extractedDeliverables : undefined
@@ -179,25 +161,18 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const checkRestrictiveLanguage = (text: string): string[] => {
-    const flags: string[] = [];
-    const restrictivePatterns = [
-      { pattern: /\d{2,}\s*years?\s*(of\s*)?experience/i, flag: "High experience requirement" },
-      { pattern: /must\s+be\s+certified\s+by/i, flag: "Specific certification requirement" },
-      { pattern: /only.*brand|brand.*only/i, flag: "Brand restriction" },
-      { pattern: /minimum.*40.*years/i, flag: "Excessive experience requirement" }
+    const restrictiveTerms = [
+      'only', 'must use', 'specifically', 'exclusively', 'proprietary',
+      'brand name', 'sole source', 'unique', 'patented', 'copyrighted'
     ];
-
-    restrictivePatterns.forEach(({ pattern, flag }) => {
-      if (pattern.test(text)) {
-        flags.push(flag);
-      }
-    });
-
-    return flags;
+    
+    return restrictiveTerms.filter(term => 
+      text.toLowerCase().includes(term.toLowerCase())
+    );
   };
 
-  const extractDeliverablesFromMessage = (message: string): any[] => {
-    const deliverables: any[] = [];
+  const extractDeliverablesFromMessage = (message: string): Deliverable[] => {
+    const deliverables: Deliverable[] = [];
     
     // Pattern for numbered lists (1. 2. etc.)
     const numberedPattern = /(\d+)\.?\s*([^,;\n]+?)(?=[,;\n]|\d+\.|$)/gi;
@@ -285,26 +260,32 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
                   {/* Show extracted deliverables for confirmation */}
                   {(message as any).extractedDeliverables && (message as any).extractedDeliverables.length > 0 && (
                     <div className="mt-4 p-3 bg-secondary/20 rounded-lg border">
-                      <h4 className="font-medium mb-2">Extracted Deliverables:</h4>
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Extracted Deliverables:
+                      </h4>
                       <div className="space-y-1 mb-3">
                         {(message as any).extractedDeliverables.map((del: any, idx: number) => (
                           <div key={idx} className="text-sm">• {del.name}</div>
                         ))}
                       </div>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
-                        className="mr-2"
-                      >
-                        Add to Form
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleSend("Let me refine these deliverables")}
-                      >
-                        Refine
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
+                          className="flex items-center gap-1"
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                          Add to Form
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleSend("Let me refine these deliverables")}
+                        >
+                          Refine
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
@@ -314,7 +295,7 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
                         <Badge
                           key={index}
                           variant="secondary"
-                          className="cursor-pointer hover:bg-secondary/80"
+                          className="cursor-pointer hover:bg-secondary/80 transition-colors"
                           onClick={() => handleSend(suggestion)}
                         >
                           {suggestion}
@@ -331,11 +312,11 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
         {isLoading && (
           <div className="flex gap-3 justify-start">
             <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-              <Bot className="w-4 h-4 text-secondary-foreground animate-pulse" />
+              <Loader2 className="w-4 h-4 text-secondary-foreground animate-spin" />
             </div>
             <Card>
               <CardContent className="p-3">
-                <p className="text-muted-foreground">AI is thinking...</p>
+                <p className="text-muted-foreground">AI is analyzing your request...</p>
               </CardContent>
             </Card>
           </div>
@@ -348,12 +329,20 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Describe your procurement needs..."
-          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+          placeholder="Describe your project needs, deliverables, or ask procurement questions..."
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           disabled={isLoading}
         />
-        <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
-          <Send className="w-4 h-4" />
+        <Button 
+          onClick={() => handleSend()} 
+          disabled={!input.trim() || isLoading}
+          size="icon"
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>
