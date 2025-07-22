@@ -169,10 +169,10 @@ export class IntakeFormService {
       errors.push("Price weight must be between 0 and 100");
     }
 
-    // Deliverables validation
-    if (formData.deliverables.length === 0) {
-      errors.push("At least one deliverable must be specified");
-    }
+    // Deliverables validation - only required for final submission, not initial saves
+    // if (formData.deliverables.length === 0) {
+    //   errors.push("At least one deliverable must be specified");
+    // }
 
     return {
       isValid: errors.length === 0,
