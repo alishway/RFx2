@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Send, User, Bot, Loader2, CheckCircle } from "lucide-react";
 import { ChatMessage, IntakeFormData, Deliverable } from "@/types/intake";
+import { AISuggestion, SuggestionExtractionResult } from "@/types/aiSuggestions";
+import { AISuggestionsService } from "@/services/aiSuggestionsService";
+import { AISuggestionCard } from "@/components/ai/AISuggestionCard";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ScopeChatProps {
@@ -29,6 +32,8 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingSuggestions, setPendingSuggestions] = useState<AISuggestion[]>([]);
+  const [isProcessingSuggestions, setIsProcessingSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -55,15 +60,12 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
+      // Generate AI response
       const aiResponse = await generateAIResponse(messageToSend, formData, messages);
-      
-      // Extract deliverables from AI response if any
-      const extractedDeliverables = extractDeliverablesFromMessage(messageToSend);
-      if (extractedDeliverables.length > 0) {
-        aiResponse.extractedDeliverables = extractedDeliverables;
-      }
-      
       setMessages(prev => [...prev, aiResponse]);
+      
+      // Process AI suggestions extraction
+      await processSuggestions(messageToSend, userMessage.id);
       
       // Auto-update form data based on message
       updateFormDataFromMessage(messageToSend, onUpdate);
@@ -74,6 +76,33 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
       setMessages(prev => [...prev, fallbackResponse]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const processSuggestions = async (message: string, messageId: string) => {
+    if (!formData.title) return; // Need a form to attach suggestions to
+    
+    setIsProcessingSuggestions(true);
+    try {
+      const extractionResults = extractSuggestionsFromMessage(message);
+      
+      for (const result of extractionResults) {
+        const { data, error } = await AISuggestionsService.createSuggestion(
+          formData.title, // Use title as temporary form ID for now
+          result.sectionType,
+          result.items,
+          messageId,
+          result.confidence
+        );
+        
+        if (data && !error) {
+          setPendingSuggestions(prev => [...prev, data]);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing suggestions:', error);
+    } finally {
+      setIsProcessingSuggestions(false);
     }
   };
 
@@ -171,54 +200,129 @@ Could you provide more specific details about the deliverables you need?`;
     );
   };
 
+  // Enhanced AI suggestion extraction for multiple sections
+  const extractSuggestionsFromMessage = (message: string): SuggestionExtractionResult[] => {
+    const results: SuggestionExtractionResult[] = [];
+    
+    // Extract deliverables
+    const deliverables = extractDeliverablesFromMessage(message);
+    if (deliverables.length > 0) {
+      results.push({
+        sectionType: 'deliverables',
+        items: deliverables,
+        confidence: 0.8
+      });
+    }
+
+    // Extract mandatory criteria
+    const mandatoryCriteria = extractMandatoryCriteria(message);
+    if (mandatoryCriteria.length > 0) {
+      results.push({
+        sectionType: 'mandatory_criteria',
+        items: mandatoryCriteria,
+        confidence: 0.7
+      });
+    }
+
+    // Extract rated criteria
+    const ratedCriteria = extractRatedCriteria(message);
+    if (ratedCriteria.length > 0) {
+      results.push({
+        sectionType: 'rated_criteria',
+        items: ratedCriteria,
+        confidence: 0.7
+      });
+    }
+
+    return results;
+  };
+
   const extractDeliverablesFromMessage = (message: string): Deliverable[] => {
     const deliverables: Deliverable[] = [];
     
-    // Pattern for numbered lists (1. 2. etc.)
-    const numberedPattern = /(\d+)\.?\s*([^,;\n]+?)(?=[,;\n]|\d+\.|$)/gi;
-    let match;
-    
-    while ((match = numberedPattern.exec(message)) !== null) {
-      const name = match[2].trim().replace(/['"]/g, '');
-      if (name.length > 3) { // Filter out very short matches
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
+    // Enhanced patterns for deliverable extraction
+    const patterns = [
+      // Numbered lists: "1. Monthly progress reports"
+      /^\s*\d+\.\s*(.+?)(?:\s*\((\d+)\s*(?:deliverables?|reports?|sessions?)\))?$/gim,
+      // Bullet points: "- Comprehensive data analysis dashboard"
+      /^\s*[-•*]\s*(.+?)(?:\s*\((\d+)\s*(?:deliverables?|reports?|sessions?)\))?$/gim,
+      // Quoted items: "Monthly progress reports"
+      /"([^"]+)"/g,
+      // General deliverable mentions
+      /(?:deliverable|report|dashboard|session|document|analysis):\s*(.+?)(?:\n|$)/gi
+    ];
+
+    patterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(message)) !== null) {
+        const name = match[1]?.trim();
+        if (name && name.length > 3) {
+          const quantity = match[2] ? parseInt(match[2]) : 1;
+          deliverables.push({
+            id: crypto.randomUUID(),
+            name: name,
+            description: `AI-suggested deliverable: ${name}`,
+            selected: false
+          });
+        }
       }
-    }
-    
-    // Pattern for bullet points (-, *, •)
-    const bulletPattern = /[•\-\*]\s*([^,;\n]+?)(?=[,;\n]|[•\-\*]|$)/gi;
-    while ((match = bulletPattern.exec(message)) !== null) {
-      const name = match[1].trim().replace(/['"]/g, '');
-      if (name.length > 3 && !deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
-      }
-    }
-    
-    // Pattern for quoted items
-    const quotedPattern = /['"]([^'"]{4,})['"]/gi;
-    while ((match = quotedPattern.exec(message)) !== null) {
-      const name = match[1].trim();
-      if (!deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
-      }
-    }
-    
+    });
+
     return deliverables;
+  };
+
+  // Extract mandatory criteria from message
+  const extractMandatoryCriteria = (message: string): any[] => {
+    const criteria: any[] = [];
+    const patterns = [
+      /(?:mandatory|required|must have|essential).*?(?:criteria|requirement|qualification)[^.]*?(?:include|require|involve)[^.]*?([^.]+)/gi,
+      /(?:vendor|supplier|contractor).*?(?:must|required to|shall)[^.]*?([^.]+)/gi
+    ];
+
+    patterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(message)) !== null) {
+        const description = match[1]?.trim();
+        if (description && description.length > 10) {
+          criteria.push({
+            id: crypto.randomUUID(),
+            name: description.length > 50 ? description.substring(0, 47) + '...' : description,
+            description: description,
+            type: 'mandatory'
+          });
+        }
+      }
+    });
+
+    return criteria;
+  };
+
+  // Extract rated criteria from message
+  const extractRatedCriteria = (message: string): any[] => {
+    const criteria: any[] = [];
+    const patterns = [
+      /(?:evaluation|rating|scoring|assessment).*?(?:criteria|factor)[^.]*?([^.]+)/gi,
+      /(?:weight|score|rate|evaluate)[^.]*?(?:based on|according to|considering)[^.]*?([^.]+)/gi,
+      /(?:methodology|approach|innovation|experience)[^.]*?(?:will be|to be).*?(?:evaluated|assessed|scored)[^.]*?([^.]*)/gi
+    ];
+
+    patterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(message)) !== null) {
+        const description = match[1]?.trim();
+        if (description && description.length > 10) {
+          criteria.push({
+            id: crypto.randomUUID(),
+            name: description.length > 50 ? description.substring(0, 47) + '...' : description,
+            description: description,
+            type: 'rated',
+            weight: 20 // Default weight
+          });
+        }
+      }
+    });
+
+    return criteria;
   };
 
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
@@ -233,8 +337,38 @@ Could you provide more specific details about the deliverables you need?`;
     }
   };
 
+  const handleSuggestionAccept = (suggestionId: string, content: any) => {
+    // Remove from pending and update form data
+    setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+    // TODO: Update actual form data based on accepted suggestion
+  };
+
+  const handleSuggestionReject = (suggestionId: string) => {
+    setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+  };
+
+  const handleSuggestionUpdate = () => {
+    // Refresh suggestions if needed
+  };
+
   return (
     <div className="space-y-4">
+      {/* AI Suggestions Section */}
+      {pendingSuggestions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">AI Suggestions</h3>
+          {pendingSuggestions.map(suggestion => (
+            <AISuggestionCard
+              key={suggestion.id}
+              suggestion={suggestion}
+              onAccept={handleSuggestionAccept}
+              onReject={handleSuggestionReject}
+              onUpdate={handleSuggestionUpdate}
+            />
+          ))}
+        </div>
+      )}
+      
       <div className="h-96 overflow-y-auto border rounded-lg p-4 space-y-4">
         {messages.map((message) => (
           <div

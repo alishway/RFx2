@@ -30,7 +30,13 @@ export const RFxIntakeForm = () => {
       rated: [],
       priceWeight: 40
     },
-    budgetTolerance: "moderate"
+    budgetTolerance: "moderate",
+    aiMetadata: {
+      suggestionsCount: 0,
+      acceptedCount: 0,
+      rejectedCount: 0,
+      modifiedCount: 0
+    }
   });
 
   const [activeTab, setActiveTab] = useState("chat");
@@ -245,22 +251,28 @@ export const RFxIntakeForm = () => {
                         <div className="font-medium text-sm">{index + 1}. {deliverable.name}</div>
                         <div className="text-xs text-muted-foreground mt-1">{deliverable.description}</div>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
-                          {deliverable.selected ? "Included" : "Optional"}
-                        </Badge>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            const updated = formData.deliverables?.filter(d => d.id !== deliverable.id) || [];
-                            updateFormData({ deliverables: updated });
-                          }}
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
+                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
+                           {deliverable.selected ? "Included" : "Optional"}
+                         </Badge>
+                         {/* Show AI badge if it's AI-suggested */}
+                         {deliverable.description?.includes('AI-suggested') && (
+                           <Badge variant="outline" className="text-xs border-primary text-primary">
+                             AI
+                           </Badge>
+                         )}
+                         <Button 
+                           variant="ghost" 
+                           size="sm"
+                           onClick={() => {
+                             const updated = formData.deliverables?.filter(d => d.id !== deliverable.id) || [];
+                             updateFormData({ deliverables: updated });
+                           }}
+                           className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                         >
+                           <X className="h-3 w-3" />
+                         </Button>
+                       </div>
                     </div>
                   ))}
                   <div className="mt-4 p-3 bg-muted/30 rounded-lg">
