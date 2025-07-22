@@ -14,9 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface ScopeChatProps {
   formData: IntakeFormData;
   onUpdate: (updates: Partial<IntakeFormData>) => void;
+  formId?: string;
 }
 
-export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
+export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -81,7 +82,7 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const processSuggestions = async (message: string, messageId: string) => {
-    if (!formData.title) return; // Need a form to attach suggestions to
+    if (!formId) return; // Need a saved form to attach suggestions to
     
     setIsProcessingSuggestions(true);
     try {
@@ -89,7 +90,7 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
       
       for (const result of extractionResults) {
         const { data, error } = await AISuggestionsService.createSuggestion(
-          formData.title, // Use title as temporary form ID for now
+          formId,
           result.sectionType,
           result.items,
           messageId,

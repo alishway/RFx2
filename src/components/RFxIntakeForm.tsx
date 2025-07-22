@@ -227,7 +227,11 @@ export const RFxIntakeForm = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScopeChat formData={formData} onUpdate={updateFormData} />
+              <ScopeChat 
+                formData={formData} 
+                onUpdate={updateFormData} 
+                formId={savedForm?.id}
+              />
             </CardContent>
           </Card>
 
