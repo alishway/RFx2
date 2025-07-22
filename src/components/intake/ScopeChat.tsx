@@ -51,8 +51,8 @@ export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
     if (!messageToSend || isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
+      id: crypto.randomUUID(),
+      role: "user", 
       content: messageToSend,
       timestamp: new Date()
     };

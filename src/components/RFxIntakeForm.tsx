@@ -79,6 +79,9 @@ export const RFxIntakeForm = () => {
       });
       setIsSaving(false);
       return;
+    } else {
+      // Clear validation errors if form is valid
+      setValidationErrors([]);
     }
 
     const result = await IntakeFormService.saveForm(formData, savedForm?.id);
