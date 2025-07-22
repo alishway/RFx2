@@ -160,11 +160,52 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
-    // Extract information from user message and update form data
+    // Extract deliverables from user message
+    const deliverablePatterns = [
+      /['"]([^'"]*report[^'"]*)['"]/gi,
+      /['"]([^'"]*dashboard[^'"]*)['"]/gi,
+      /['"]([^'"]*session[^'"]*)['"]/gi,
+      /['"]([^'"]*analysis[^'"]*)['"]/gi,
+      /['"]([^'"]*deliverable[^'"]*)['"]/gi
+    ];
+    
+    const extractedDeliverables: any[] = [];
+    
+    deliverablePatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(message)) !== null) {
+        const name = match[1].trim();
+        if (name && !extractedDeliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+          extractedDeliverables.push({
+            id: Math.random().toString(36).substr(2, 9),
+            name: name,
+            description: `Deliverable: ${name}`,
+            selected: true
+          });
+        }
+      }
+    });
+    
+    // If deliverables were found, add them to existing deliverables
+    if (extractedDeliverables.length > 0) {
+      const currentDeliverables = formData.deliverables || [];
+      const newDeliverables = [...currentDeliverables];
+      
+      extractedDeliverables.forEach(newDel => {
+        if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
+          newDeliverables.push(newDel);
+        }
+      });
+      
+      onUpdate({ deliverables: newDeliverables });
+    }
+    
+    // Extract commodity type
     if (message.toLowerCase().includes('data analysis') && !formData.commodityType) {
       onUpdate({ commodityType: 'Data Analysis Services' });
     }
     
+    // Update background if empty
     if (!formData.background) {
       onUpdate({ background: message });
     }
