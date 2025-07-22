@@ -238,6 +238,29 @@ export const RFxIntakeForm = () => {
             </CardContent>
           </Card>
 
+          {/* AI Suggestions for Deliverables */}
+          {savedForm?.id && (
+            <SuggestionReviewPanel
+              intakeFormId={savedForm.id}
+              sectionType="deliverables"
+              title="Deliverables"
+              onSuggestionAccepted={(suggestion, content) => {
+                const newDeliverable = {
+                  id: crypto.randomUUID(),
+                  name: content.name || 'New Deliverable',
+                  description: content.description || '',
+                  selected: true
+                };
+                const updated = [...(formData.deliverables || []), newDeliverable];
+                updateFormData({ deliverables: updated });
+                toast({
+                  title: "Deliverable Added",
+                  description: `"${newDeliverable.name}" has been added to your form`,
+                });
+              }}
+            />
+          )}
+
           {/* Deliverables Summary */}
           <Card>
             <CardHeader>
@@ -250,8 +273,8 @@ export const RFxIntakeForm = () => {
               </CardTitle>
               <CardDescription>
                 {formData.deliverables && formData.deliverables.length > 0 
-                  ? "AI has identified these deliverables from your chat. Click to edit or remove."
-                  : "No deliverables identified yet. Use the AI chat above to define your project deliverables."
+                  ? "Review and manage your project deliverables. Use AI chat above for suggestions."
+                  : "No deliverables defined yet. Use the AI chat above or add manually below."
                 }
               </CardDescription>
             </CardHeader>
@@ -268,12 +291,6 @@ export const RFxIntakeForm = () => {
                          <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
                            {deliverable.selected ? "Included" : "Optional"}
                          </Badge>
-                         {/* Show AI badge if it's AI-suggested */}
-                         {deliverable.description?.includes('AI-suggested') && (
-                           <Badge variant="outline" className="text-xs border-primary text-primary">
-                             AI
-                           </Badge>
-                         )}
                          <Button 
                            variant="ghost" 
                            size="sm"
@@ -288,17 +305,49 @@ export const RFxIntakeForm = () => {
                        </div>
                     </div>
                   ))}
-                  <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                    <p className="text-xs text-muted-foreground">
-                      💡 <strong>Tip:</strong> Continue chatting with AI to refine or add more deliverables. All changes are auto-saved.
-                    </p>
-                  </div>
+                  
+                  {/* Manual Add Button */}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      const newDeliverable = {
+                        id: crypto.randomUUID(),
+                        name: `Deliverable ${(formData.deliverables?.length || 0) + 1}`,
+                        description: 'Click to edit description',
+                        selected: true
+                      };
+                      const updated = [...(formData.deliverables || []), newDeliverable];
+                      updateFormData({ deliverables: updated });
+                    }}
+                    className="w-full border-dashed"
+                  >
+                    + Add Deliverable Manually
+                  </Button>
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm mb-2">No deliverables defined yet</p>
-                  <p className="text-xs">Use the AI chat above to describe what you need delivered</p>
+                <div className="space-y-4">
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm mb-2">No deliverables defined yet</p>
+                    <p className="text-xs">Use the AI chat above to describe what you need delivered</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      const newDeliverable = {
+                        id: crypto.randomUUID(),
+                        name: 'New Deliverable',
+                        description: 'Describe what needs to be delivered',
+                        selected: true
+                      };
+                      updateFormData({ deliverables: [newDeliverable] });
+                    }}
+                    className="w-full border-dashed"
+                  >
+                    + Add First Deliverable Manually
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -306,6 +355,58 @@ export const RFxIntakeForm = () => {
         </TabsContent>
 
         <TabsContent value="requirements" className="space-y-4">
+          {/* AI Suggestions for Requirements */}
+          {savedForm?.id && (
+            <div className="space-y-4">
+              <SuggestionReviewPanel
+                intakeFormId={savedForm.id}
+                sectionType="mandatory_criteria"
+                title="Mandatory Criteria"
+                onSuggestionAccepted={(suggestion, content) => {
+                  const newCriteria = {
+                    id: crypto.randomUUID(),
+                    name: content.name || content.requirement || 'New Requirement',
+                    description: content.description || content.rationale || '',
+                    type: 'mandatory' as const
+                  };
+                  const updated = {
+                    ...formData.requirements,
+                    mandatory: [...(formData.requirements.mandatory || []), newCriteria]
+                  };
+                  updateFormData({ requirements: updated });
+                  toast({
+                    title: "Mandatory Criteria Added",
+                    description: `"${newCriteria.name}" has been added to your form`,
+                  });
+                }}
+              />
+              
+              <SuggestionReviewPanel
+                intakeFormId={savedForm.id}
+                sectionType="rated_criteria"
+                title="Rated Criteria"
+                onSuggestionAccepted={(suggestion, content) => {
+                  const newCriteria = {
+                    id: crypto.randomUUID(),
+                    name: content.name || content.requirement || 'New Rated Criteria',
+                    description: content.description || content.rationale || '',
+                    type: 'rated' as const,
+                    weight: content.weight || 10
+                  };
+                  const updated = {
+                    ...formData.requirements,
+                    rated: [...(formData.requirements.rated || []), newCriteria]
+                  };
+                  updateFormData({ requirements: updated });
+                  toast({
+                    title: "Rated Criteria Added",
+                    description: `"${newCriteria.name}" has been added to your form`,
+                  });
+                }}
+              />
+            </div>
+          )}
+          
           <Card>
             <CardHeader>
               <CardTitle>Selection Requirements Wizard</CardTitle>
