@@ -48,6 +48,9 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
+      // Temporarily force fallback to test the cards
+      throw new Error("Testing fallback response");
+      
       // Call AI edge function
       const aiResponse = await generateAIResponse(messageText, formData, messages);
       
@@ -102,8 +105,9 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
           };
           onUpdate({ 
             requirements: {
-              ...formData.requirements!,
-              mandatory: [...currentMandatory, newRequirement]
+              mandatory: [...currentMandatory, newRequirement],
+              rated: formData.requirements?.rated || [],
+              priceWeight: formData.requirements?.priceWeight || 30
             }
           });
           toast({
@@ -126,8 +130,9 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
           };
           onUpdate({ 
             requirements: {
-              ...formData.requirements!,
-              rated: [...currentRated, newRequirement]
+              mandatory: formData.requirements?.mandatory || [],
+              rated: [...currentRated, newRequirement],
+              priceWeight: formData.requirements?.priceWeight || 30
             }
           });
           toast({
@@ -163,13 +168,17 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
 
       if (error) throw error;
 
+      // Detect content type for AI responses too
+      const contentType = detectContentType(userMessage);
+
       return {
         id: Date.now().toString(),
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
         suggestions: data.suggestions || [],
-        extractedDeliverables: data.extractedDeliverables || []
+        extractedDeliverables: data.extractedDeliverables || [],
+        contentType
       };
     } catch (error) {
       console.error('AI response error:', error);
