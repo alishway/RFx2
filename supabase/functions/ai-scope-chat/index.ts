@@ -72,6 +72,15 @@ Respond in a helpful, professional manner. If you identify compliance concerns, 
 
     const aiResponse = data.choices[0].message.content;
 
+    // Detect content type and generate structured suggestions
+    const contentType = detectContentType(message);
+    let extractedDeliverables: any[] = [];
+
+    if (contentType !== 'general') {
+      const structuredContent = generateStructuredContent(contentType, message, formData);
+      extractedDeliverables = structuredContent.items;
+    }
+
     // Analyze for compliance flags
     const complianceFlags = analyzeComplianceFlags(aiResponse, message);
 
@@ -81,7 +90,8 @@ Respond in a helpful, professional manner. If you identify compliance concerns, 
     return new Response(JSON.stringify({
       response: aiResponse,
       suggestions: suggestions,
-      complianceFlags: complianceFlags
+      complianceFlags: complianceFlags,
+      extractedDeliverables: extractedDeliverables
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -147,4 +157,99 @@ function generateSuggestions(formData: any, aiResponse: string): string[] {
   }
 
   return suggestions;
+}
+
+// Helper function to detect content type
+function detectContentType(message: string): string {
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('deliverable') || lowerMessage.includes('outcome') || lowerMessage.includes('produce')) {
+    return 'deliverables';
+  }
+  if (lowerMessage.includes('mandatory') || lowerMessage.includes('required') || lowerMessage.includes('must have')) {
+    return 'mandatory';
+  }
+  if (lowerMessage.includes('rated') || lowerMessage.includes('scoring') || lowerMessage.includes('evaluate')) {
+    return 'rated';
+  }
+  return 'general';
+}
+
+// Helper function to generate structured content based on type
+function generateStructuredContent(contentType: string, message: string, formData: any): { items: any[] } {
+  switch (contentType) {
+    case 'deliverables':
+      return {
+        items: [
+          {
+            id: `del_${Date.now()}_1`,
+            name: "Project Charter",
+            description: "Comprehensive project initiation document outlining scope, objectives, and methodology",
+            timeline: "Week 1"
+          },
+          {
+            id: `del_${Date.now()}_2`,
+            name: "Data Analysis Report",
+            description: "Detailed analysis of provided datasets with insights and recommendations",
+            timeline: "Week 4"
+          },
+          {
+            id: `del_${Date.now()}_3`,
+            name: "Final Presentation",
+            description: "Executive summary presentation of findings and strategic recommendations",
+            timeline: "Week 6"
+          }
+        ]
+      };
+
+    case 'mandatory':
+      return {
+        items: [
+          {
+            id: `mand_${Date.now()}_1`,
+            name: "Professional Certification",
+            description: "Vendor must hold relevant professional certification in the field of expertise"
+          },
+          {
+            id: `mand_${Date.now()}_2`,
+            name: "Financial Standing",
+            description: "Vendor must demonstrate financial stability through audited financial statements"
+          },
+          {
+            id: `mand_${Date.now()}_3`,
+            name: "Security Clearance",
+            description: "Key personnel must possess appropriate government security clearance level"
+          }
+        ]
+      };
+
+    case 'rated':
+      return {
+        items: [
+          {
+            id: `rated_${Date.now()}_1`,
+            name: "Technical Approach",
+            description: "Quality and feasibility of proposed methodology and technical solution",
+            weight: 30,
+            scale: "0-100 points"
+          },
+          {
+            id: `rated_${Date.now()}_2`,
+            name: "Team Qualifications",
+            description: "Experience and expertise of proposed project team members",
+            weight: 25,
+            scale: "0-100 points"
+          },
+          {
+            id: `rated_${Date.now()}_3`,
+            name: "Past Performance",
+            description: "Track record of successful project delivery in similar contexts",
+            weight: 20,
+            scale: "0-100 points"
+          }
+        ]
+      };
+
+    default:
+      return { items: [] };
+  }
 }

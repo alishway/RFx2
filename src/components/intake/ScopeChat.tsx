@@ -48,9 +48,6 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
-      // Temporarily force fallback to test the cards
-      throw new Error("Testing fallback response");
-      
       // Call AI edge function
       const aiResponse = await generateAIResponse(messageText, formData, messages);
       
