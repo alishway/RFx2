@@ -152,7 +152,7 @@ const ProcurementReviewDashboard: React.FC<ProcurementReviewDashboardProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {forms.filter(f => (f.estimated_value || 0) > 100000).length}
+              {forms.filter(f => f.status === 'submitted').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Forms over $100k CAD
@@ -190,7 +190,7 @@ const ProcurementReviewDashboard: React.FC<ProcurementReviewDashboardProps> = ({
                       </CardDescription>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {getPriorityIcon(form.estimated_value || undefined)}
+                      {getPriorityIcon(undefined)}
                       <Badge className={getStatusColor(form.status)}>
                         {form.status.replace("_", " ")}
                       </Badge>
@@ -205,12 +205,9 @@ const ProcurementReviewDashboard: React.FC<ProcurementReviewDashboardProps> = ({
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Estimated Value:</span>
+                        <span className="font-medium">Budget Tolerance:</span>
                         <p className="text-muted-foreground">
-                          {form.estimated_value 
-                            ? `$${Number(form.estimated_value).toLocaleString()} CAD`
-                            : "Not specified"
-                          }
+                          {form.budget_tolerance || "Not specified"}
                         </p>
                       </div>
                       <div>

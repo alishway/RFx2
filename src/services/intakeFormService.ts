@@ -10,12 +10,10 @@ export interface SavedIntakeForm {
   start_date?: string;
   end_date?: string;
   budget_tolerance?: 'sensitive' | 'moderate' | 'flexible';
-  estimated_value?: number;
   status: 'draft' | 'in_progress' | 'submitted' | 'in_review' | 'approved' | 'rejected';
   deliverables: any;
   tasks: any;
   requirements: any;
-  compliance_flags: any;
   created_at: string;
   updated_at: string;
 }

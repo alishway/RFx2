@@ -40,20 +40,21 @@ export class ComplianceService {
       });
     }
 
-    // Budget validation
-    if (intakeForm.estimated_value) {
-      const value = Number(intakeForm.estimated_value);
+    // Budget validation - commented out since estimated_value column was removed
+    // TODO: Re-implement when budget fields are added back to the form
+    const estimatedBudget = 0; // Placeholder
+    if (estimatedBudget > 0) {
       const thresholdCAD = 25000; // CFTA threshold example
       
       checks.push({
         id: "trade_agreement_threshold",
         name: "Trade Agreement Threshold",
         description: "Project value and trade agreement obligations",
-        type: value > thresholdCAD ? "warning" : "info",
+        type: estimatedBudget > thresholdCAD ? "warning" : "info",
         passed: true,
-        details: value > thresholdCAD 
-          ? `Value: $${value.toLocaleString()} CAD - Subject to CFTA/CETA obligations`
-          : `Value: $${value.toLocaleString()} CAD - Below major trade agreement thresholds`
+        details: estimatedBudget > thresholdCAD 
+          ? `Value: $${estimatedBudget.toLocaleString()} CAD - Subject to CFTA/CETA obligations`
+          : `Value: $${estimatedBudget.toLocaleString()} CAD - Below major trade agreement thresholds`
       });
     }
 

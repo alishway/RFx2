@@ -82,6 +82,19 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     }
   };
 
+  const handleAddSingleDeliverable = (deliverable: any) => {
+    const currentDeliverables = formData.deliverables || [];
+    if (!currentDeliverables.some(existing => existing.name.toLowerCase() === deliverable.name.toLowerCase())) {
+      const newDeliverables = [...currentDeliverables, deliverable];
+      onUpdate({ deliverables: newDeliverables });
+      
+      toast({
+        title: "Deliverable Added",
+        description: `"${deliverable.name}" added to your form`,
+      });
+    }
+  };
+
   const handleConfirmDeliverables = (deliverables: any[]) => {
     const currentDeliverables = formData.deliverables || [];
     const newDeliverables = [...currentDeliverables];
@@ -285,26 +298,45 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
                   {/* Show extracted deliverables for confirmation */}
                   {(message as any).extractedDeliverables && (message as any).extractedDeliverables.length > 0 && (
                     <div className="mt-4 p-3 bg-secondary/20 rounded-lg border">
-                      <h4 className="font-medium mb-2">Extracted Deliverables:</h4>
-                      <div className="space-y-1 mb-3">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        AI Suggested Deliverables:
+                        <Badge variant="secondary" className="text-xs">
+                          {(message as any).extractedDeliverables.length} found
+                        </Badge>
+                      </h4>
+                      <div className="space-y-2 mb-3">
                         {(message as any).extractedDeliverables.map((del: any, idx: number) => (
-                          <div key={idx} className="text-sm">• {del.name}</div>
+                          <div key={idx} className="flex items-center justify-between p-2 bg-background/50 rounded border">
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">{del.name}</div>
+                              <div className="text-xs text-muted-foreground">{del.description}</div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleAddSingleDeliverable(del)}
+                              className="ml-2"
+                            >
+                              Add to Form
+                            </Button>
+                          </div>
                         ))}
                       </div>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
-                        className="mr-2"
-                      >
-                        Add to Form
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleSend("Let me refine these deliverables")}
-                      >
-                        Refine
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
+                        >
+                          Add All
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleSend("Let me refine these deliverables")}
+                        >
+                          Refine
+                        </Button>
+                      </div>
                     </div>
                   )}
                   

@@ -9,6 +9,7 @@ import { ScopeChat } from "./intake/ScopeChat";
 import { RequirementsWizard } from "./intake/RequirementsWizard";
 import { BudgetTolerance } from "./intake/BudgetTolerance";
 import { FileUpload } from "./intake/FileUpload";
+import { DeliverablesManager } from "./intake/DeliverablesManager";
 import { IntakeFormData } from "@/types/intake";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
 import { useToast } from "@/hooks/use-toast";
@@ -219,32 +220,8 @@ export const RFxIntakeForm = () => {
             </CardContent>
           </Card>
 
-          {/* Deliverables Summary */}
-          {formData.deliverables && formData.deliverables.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Identified Deliverables</CardTitle>
-                <CardDescription>
-                  These deliverables have been extracted from your conversations above
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {formData.deliverables.map((deliverable, index) => (
-                    <div key={deliverable.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{index + 1}. {deliverable.name}</div>
-                        <div className="text-sm text-muted-foreground">{deliverable.description}</div>
-                      </div>
-                      <Badge variant={deliverable.selected ? "default" : "secondary"}>
-                        {deliverable.selected ? "Included" : "Optional"}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Enhanced Deliverables Manager */}
+          <DeliverablesManager formData={formData} onUpdate={updateFormData} />
         </TabsContent>
 
         <TabsContent value="requirements" className="space-y-4">

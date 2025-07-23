@@ -42,16 +42,16 @@ const FormReviewDetail: React.FC<FormReviewDetailProps> = ({ formId, onBack }) =
         const compliance = await ComplianceService.analyzeCompliance(data.intakeForm);
         setComplianceResult(compliance);
         
-        // Create compliance report if it doesn't exist
-        if (!data.complianceReport && compliance) {
-          await ProcurementReviewService.createComplianceReport(
-            formId,
-            { checks: compliance.checks },
-            compliance.overallScore,
-            compliance.criticalFlags,
-            compliance.warningFlags
-          );
-        }
+        // TODO: Create compliance report when table is available
+        // if (!data.complianceReport && compliance) {
+        //   await ProcurementReviewService.createComplianceReport(
+        //     formId,
+        //     { checks: compliance.checks },
+        //     compliance.overallScore,
+        //     compliance.criticalFlags,
+        //     compliance.warningFlags
+        //   );
+        // }
       }
     } catch (error) {
       console.error("Error loading review data:", error);
@@ -220,7 +220,7 @@ const FormReviewDetail: React.FC<FormReviewDetailProps> = ({ formId, onBack }) =
                   <div>
                     <label className="text-sm font-medium">Estimated Value</label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {formatCurrency(intakeForm.estimated_value)}
+                      {"Not available"}
                     </p>
                   </div>
                   <div>
@@ -339,11 +339,21 @@ const FormReviewDetail: React.FC<FormReviewDetailProps> = ({ formId, onBack }) =
         </TabsContent>
 
         <TabsContent value="ai-results">
-          <AIResultsViewer 
-            intakeFormId={formId}
-            aiOutputs={reviewData.aiOutputs}
-            onRefresh={() => loadReviewData()}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Analysis Results</CardTitle>
+              <CardDescription>AI-generated analysis and recommendations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">AI analysis features coming soon</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  This will display AI-generated content analysis, compliance checks, and recommendations.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="documents">
@@ -355,28 +365,10 @@ const FormReviewDetail: React.FC<FormReviewDetailProps> = ({ formId, onBack }) =
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {reviewData.generatedDocuments.length > 0 ? (
+              {false ? (
                 <div className="space-y-4">
-                  {reviewData.generatedDocuments.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{doc.document_type.toUpperCase()} Document</p>
-                          <p className="text-sm text-muted-foreground">
-                            Generated {formatDate(doc.generated_at)} • Version {doc.version}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">{doc.status}</Badge>
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {/* TODO: Re-implement when documents table is available */}
+                  <p>Documents will appear here</p>
                 </div>
               ) : (
                 <div className="text-center py-8">
