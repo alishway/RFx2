@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, AlertTriangle, Info, Calculator } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, AlertTriangle, Info, Calculator, Edit } from "lucide-react";
 import { IntakeFormData, Requirement } from "@/types/intake";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +25,8 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
     description: "",
     type: "mandatory"
   });
+  const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Calculate optimal weight distribution
@@ -76,6 +80,48 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
     }
 
     onUpdate({ requirements: updatedRequirements });
+  };
+
+  const handleEditRequirement = (requirement: Requirement) => {
+    setEditingRequirement(requirement);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingRequirement || !editingRequirement.name || !editingRequirement.description) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both name and description for the requirement.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const updatedRequirements = { ...formData.requirements };
+    
+    if (editingRequirement.type === 'mandatory') {
+      updatedRequirements.mandatory = updatedRequirements.mandatory.map(req =>
+        req.id === editingRequirement.id ? editingRequirement : req
+      );
+    } else {
+      updatedRequirements.rated = updatedRequirements.rated.map(req =>
+        req.id === editingRequirement.id ? editingRequirement : req
+      );
+    }
+
+    onUpdate({ requirements: updatedRequirements });
+    setIsEditDialogOpen(false);
+    setEditingRequirement(null);
+    
+    toast({
+      title: "Requirement Updated",
+      description: "The requirement has been successfully updated."
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditDialogOpen(false);
+    setEditingRequirement(null);
   };
 
   const updatePriceWeight = (weight: number[]) => {
@@ -182,13 +228,22 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
               <div key={req.id} className="p-3 border rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-medium">{req.name}</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeRequirement(req.id, 'mandatory')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditRequirement(req)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRequirement(req.id, 'mandatory')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">{req.description}</p>
                 <Badge variant="outline" className="mt-2">Pass/Fail</Badge>
@@ -230,13 +285,22 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
               <div key={req.id} className="p-3 border rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-medium">{req.name}</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeRequirement(req.id, 'rated')}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditRequirement(req)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRequirement(req.id, 'rated')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">{req.description}</p>
                 <div className="flex gap-2">
@@ -411,6 +475,91 @@ export const RequirementsWizard = ({ formData, onUpdate }: RequirementsWizardPro
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Requirement Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Requirement</DialogTitle>
+          </DialogHeader>
+          
+          {editingRequirement && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Requirement Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingRequirement.name}
+                  onChange={(e) => setEditingRequirement(prev => 
+                    prev ? { ...prev, name: e.target.value } : null
+                  )}
+                  placeholder="Enter requirement name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingRequirement.description}
+                  onChange={(e) => setEditingRequirement(prev => 
+                    prev ? { ...prev, description: e.target.value } : null
+                  )}
+                  placeholder="Describe the requirement in detail"
+                  rows={3}
+                />
+              </div>
+
+              {editingRequirement.type === 'rated' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-weight">Weight (%)</Label>
+                    <Input
+                      id="edit-weight"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={editingRequirement.weight || ''}
+                      onChange={(e) => setEditingRequirement(prev => 
+                        prev ? { ...prev, weight: parseInt(e.target.value) || 0 } : null
+                      )}
+                      placeholder="Enter weight percentage"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-scale">Scoring Scale</Label>
+                    <Select
+                      value={editingRequirement.scale || '0-4'}
+                      onValueChange={(value) => setEditingRequirement(prev => 
+                        prev ? { ...prev, scale: value } : null
+                      )}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0-4">0-4 points</SelectItem>
+                        <SelectItem value="0-10">0-10 points</SelectItem>
+                        <SelectItem value="0-100">0-100 points</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
