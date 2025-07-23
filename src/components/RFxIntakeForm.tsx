@@ -11,10 +11,8 @@ import { BudgetTolerance } from "./intake/BudgetTolerance";
 import { FileUpload } from "./intake/FileUpload";
 import { IntakeFormData } from "@/types/intake";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
-import { AISuggestionsDashboard } from "@/components/ai/AISuggestionsDashboard";
-import { SuggestionReviewPanel } from "@/components/ai/SuggestionReviewPanel";
 import { useToast } from "@/hooks/use-toast";
-import { Save, AlertCircle, CheckCircle2, Package, X, Brain } from "lucide-react";
+import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export const RFxIntakeForm = () => {
   const [formData, setFormData] = useState<IntakeFormData>({
@@ -32,13 +30,7 @@ export const RFxIntakeForm = () => {
       rated: [],
       priceWeight: 40
     },
-    budgetTolerance: "moderate",
-    aiMetadata: {
-      suggestionsCount: 0,
-      acceptedCount: 0,
-      rejectedCount: 0,
-      modifiedCount: 0
-    }
+    budgetTolerance: "moderate"
   });
 
   const [activeTab, setActiveTab] = useState("chat");
@@ -79,9 +71,6 @@ export const RFxIntakeForm = () => {
       });
       setIsSaving(false);
       return;
-    } else {
-      // Clear validation errors if form is valid
-      setValidationErrors([]);
     }
 
     const result = await IntakeFormService.saveForm(formData, savedForm?.id);
@@ -158,15 +147,11 @@ export const RFxIntakeForm = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="chat">Scope Development</TabsTrigger>
           <TabsTrigger value="requirements">Selection Criteria</TabsTrigger>
           <TabsTrigger value="budget">Budget & Timeline</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
-          <TabsTrigger value="ai-dashboard" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            AI Dashboard
-          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="chat" className="space-y-4">
@@ -230,203 +215,39 @@ export const RFxIntakeForm = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScopeChat 
-                formData={formData} 
-                onUpdate={updateFormData} 
-                formId={savedForm?.id}
-              />
+              <ScopeChat formData={formData} onUpdate={updateFormData} />
             </CardContent>
           </Card>
-
-          {/* AI Suggestions for Deliverables */}
-          {savedForm?.id && (
-            <SuggestionReviewPanel
-              intakeFormId={savedForm.id}
-              sectionType="deliverables"
-              title="Deliverables"
-              onSuggestionAccepted={(suggestion, content) => {
-                const newDeliverable = {
-                  id: crypto.randomUUID(),
-                  name: content.name || 'New Deliverable',
-                  description: content.description || '',
-                  selected: true
-                };
-                const updated = [...(formData.deliverables || []), newDeliverable];
-                updateFormData({ deliverables: updated });
-                toast({
-                  title: "Deliverable Added",
-                  description: `"${newDeliverable.name}" has been added to your form`,
-                });
-              }}
-            />
-          )}
 
           {/* Deliverables Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Identified Deliverables
-                {formData.deliverables && formData.deliverables.length > 0 && (
-                  <Badge variant="secondary">{formData.deliverables.length}</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {formData.deliverables && formData.deliverables.length > 0 
-                  ? "Review and manage your project deliverables. Use AI chat above for suggestions."
-                  : "No deliverables defined yet. Use the AI chat above or add manually below."
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {formData.deliverables && formData.deliverables.length > 0 ? (
+          {formData.deliverables && formData.deliverables.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Identified Deliverables</CardTitle>
+                <CardDescription>
+                  These deliverables have been extracted from your conversations above
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-3">
                   {formData.deliverables.map((deliverable, index) => (
-                     <div key={deliverable.id} className="group flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
-                       <div className="flex-1 space-y-2">
-                         <Input
-                           value={deliverable.name}
-                           onChange={(e) => {
-                             const updated = formData.deliverables?.map(d => 
-                               d.id === deliverable.id ? { ...d, name: e.target.value } : d
-                             ) || [];
-                             updateFormData({ deliverables: updated });
-                           }}
-                           className="font-medium text-sm border-0 p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                           placeholder="Deliverable name"
-                         />
-                         <Input
-                           value={deliverable.description}
-                           onChange={(e) => {
-                             const updated = formData.deliverables?.map(d => 
-                               d.id === deliverable.id ? { ...d, description: e.target.value } : d
-                             ) || [];
-                             updateFormData({ deliverables: updated });
-                           }}
-                           className="text-xs text-muted-foreground border-0 p-0 h-auto bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                           placeholder="Describe what needs to be delivered"
-                         />
-                       </div>
-                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Badge variant={deliverable.selected ? "default" : "secondary"} className="text-xs">
-                           {deliverable.selected ? "Included" : "Optional"}
-                         </Badge>
-                         <Button 
-                           variant="ghost" 
-                           size="sm"
-                           onClick={() => {
-                             const updated = formData.deliverables?.filter(d => d.id !== deliverable.id) || [];
-                             updateFormData({ deliverables: updated });
-                           }}
-                           className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                         >
-                           <X className="h-3 w-3" />
-                         </Button>
-                       </div>
+                    <div key={deliverable.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{index + 1}. {deliverable.name}</div>
+                        <div className="text-sm text-muted-foreground">{deliverable.description}</div>
+                      </div>
+                      <Badge variant={deliverable.selected ? "default" : "secondary"}>
+                        {deliverable.selected ? "Included" : "Optional"}
+                      </Badge>
                     </div>
                   ))}
-                  
-                  {/* Manual Add Button */}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      const newDeliverable = {
-                        id: crypto.randomUUID(),
-                        name: `Deliverable ${(formData.deliverables?.length || 0) + 1}`,
-                        description: 'Click to edit description',
-                        selected: true
-                      };
-                      const updated = [...(formData.deliverables || []), newDeliverable];
-                      updateFormData({ deliverables: updated });
-                    }}
-                    className="w-full border-dashed"
-                  >
-                    + Add Deliverable Manually
-                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm mb-2">No deliverables defined yet</p>
-                    <p className="text-xs">Use the AI chat above to describe what you need delivered</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      const newDeliverable = {
-                        id: crypto.randomUUID(),
-                        name: 'New Deliverable',
-                        description: 'Describe what needs to be delivered',
-                        selected: true
-                      };
-                      updateFormData({ deliverables: [newDeliverable] });
-                    }}
-                    className="w-full border-dashed"
-                  >
-                    + Add First Deliverable Manually
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="requirements" className="space-y-4">
-          {/* AI Suggestions for Requirements */}
-          {savedForm?.id && (
-            <div className="space-y-4">
-              <SuggestionReviewPanel
-                intakeFormId={savedForm.id}
-                sectionType="mandatory_criteria"
-                title="Mandatory Criteria"
-                onSuggestionAccepted={(suggestion, content) => {
-                  const newCriteria = {
-                    id: crypto.randomUUID(),
-                    name: content.name || content.requirement || 'New Requirement',
-                    description: content.description || content.rationale || '',
-                    type: 'mandatory' as const
-                  };
-                  const updated = {
-                    ...formData.requirements,
-                    mandatory: [...(formData.requirements.mandatory || []), newCriteria]
-                  };
-                  updateFormData({ requirements: updated });
-                  toast({
-                    title: "Mandatory Criteria Added",
-                    description: `"${newCriteria.name}" has been added to your form`,
-                  });
-                }}
-              />
-              
-              <SuggestionReviewPanel
-                intakeFormId={savedForm.id}
-                sectionType="rated_criteria"
-                title="Rated Criteria"
-                onSuggestionAccepted={(suggestion, content) => {
-                  const newCriteria = {
-                    id: crypto.randomUUID(),
-                    name: content.name || content.requirement || 'New Rated Criteria',
-                    description: content.description || content.rationale || '',
-                    type: 'rated' as const,
-                    weight: content.weight || 10
-                  };
-                  const updated = {
-                    ...formData.requirements,
-                    rated: [...(formData.requirements.rated || []), newCriteria]
-                  };
-                  updateFormData({ requirements: updated });
-                  toast({
-                    title: "Rated Criteria Added",
-                    description: `"${newCriteria.name}" has been added to your form`,
-                  });
-                }}
-              />
-            </div>
-          )}
-          
           <Card>
             <CardHeader>
               <CardTitle>Selection Requirements Wizard</CardTitle>
@@ -460,28 +281,6 @@ export const RFxIntakeForm = () => {
             attachments={formData.attachments}
             onAttachmentsChange={(files) => updateFormData({ attachments: files })}
           />
-        </TabsContent>
-
-        <TabsContent value="ai-dashboard" className="space-y-4">
-          {savedForm?.id ? (
-            <AISuggestionsDashboard 
-              intakeFormId={savedForm.id}
-              onSuggestionUpdate={() => {
-                // Refresh form data if needed
-                console.log('AI suggestion updated');
-              }}
-            />
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-muted-foreground">
-                  <Brain className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm mb-2">Save your form first to access AI suggestions</p>
-                  <p className="text-xs">AI suggestions will appear here once you've saved your intake form</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
       </Tabs>
     </div>

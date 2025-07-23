@@ -64,51 +64,6 @@ export type Database = {
           },
         ]
       }
-      ai_suggestions: {
-        Row: {
-          accepted_at: string | null
-          confidence_score: number | null
-          created_at: string
-          id: string
-          intake_form_id: string
-          modified_content: Json | null
-          section_type: string
-          source_message_id: string | null
-          status: string
-          suggestion_content: Json
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          confidence_score?: number | null
-          created_at?: string
-          id?: string
-          intake_form_id: string
-          modified_content?: Json | null
-          section_type: string
-          source_message_id?: string | null
-          status?: string
-          suggestion_content?: Json
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          confidence_score?: number | null
-          created_at?: string
-          id?: string
-          intake_form_id?: string
-          modified_content?: Json | null
-          section_type?: string
-          source_message_id?: string | null
-          status?: string
-          suggestion_content?: Json
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       approval_workflows: {
         Row: {
           assigned_to_role: string
@@ -196,7 +151,6 @@ export type Database = {
         Row: {
           content: string
           created_at: string
-          extracted_suggestions: Json | null
           id: string
           metadata: Json | null
           role: string
@@ -206,7 +160,6 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
-          extracted_suggestions?: Json | null
           id?: string
           metadata?: Json | null
           role: string
@@ -216,7 +169,6 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
-          extracted_suggestions?: Json | null
           id?: string
           metadata?: Json | null
           role?: string
@@ -315,48 +267,6 @@ export type Database = {
           },
         ]
       }
-      evaluation_criteria: {
-        Row: {
-          ai_suggestion_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          intake_form_id: string
-          name: string
-          source: string
-          type: string
-          updated_at: string
-          user_id: string
-          weight: number | null
-        }
-        Insert: {
-          ai_suggestion_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          intake_form_id: string
-          name: string
-          source?: string
-          type: string
-          updated_at?: string
-          user_id: string
-          weight?: number | null
-        }
-        Update: {
-          ai_suggestion_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          intake_form_id?: string
-          name?: string
-          source?: string
-          type?: string
-          updated_at?: string
-          user_id?: string
-          weight?: number | null
-        }
-        Relationships: []
-      }
       file_attachments: {
         Row: {
           created_at: string
@@ -450,7 +360,6 @@ export type Database = {
       }
       intake_forms: {
         Row: {
-          ai_metadata: Json | null
           background: string | null
           budget_tolerance:
             | Database["public"]["Enums"]["budget_tolerance"]
@@ -471,7 +380,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          ai_metadata?: Json | null
           background?: string | null
           budget_tolerance?:
             | Database["public"]["Enums"]["budget_tolerance"]
@@ -492,7 +400,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          ai_metadata?: Json | null
           background?: string | null
           budget_tolerance?:
             | Database["public"]["Enums"]["budget_tolerance"]

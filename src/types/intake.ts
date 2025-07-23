@@ -40,13 +40,6 @@ export interface IntakeFormData {
   attachments: File[];
   requirements: Requirements;
   budgetTolerance: 'sensitive' | 'moderate' | 'flexible';
-  aiMetadata?: {
-    lastProcessedMessageId?: string;
-    suggestionsCount: number;
-    acceptedCount: number;
-    rejectedCount: number;
-    modifiedCount: number;
-  };
 }
 
 export interface ChatMessage {

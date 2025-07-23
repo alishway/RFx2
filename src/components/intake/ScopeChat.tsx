@@ -1,54 +1,38 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, User, Bot, Loader2, CheckCircle } from "lucide-react";
-import { ChatMessage, IntakeFormData, Deliverable } from "@/types/intake";
-import { AISuggestion, SuggestionExtractionResult } from "@/types/aiSuggestions";
-import { AISuggestionsService } from "@/services/aiSuggestionsService";
-import { SuggestionExtractionService } from "@/services/suggestionExtractionService";
-import { AISuggestionCard } from "@/components/ai/AISuggestionCard";
+import { Send, Bot, User, AlertTriangle } from "lucide-react";
+import { ChatMessage, IntakeFormData } from "@/types/intake";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useChatContext } from "@/contexts/ChatContext";
 
 interface ScopeChatProps {
   formData: IntakeFormData;
   onUpdate: (updates: Partial<IntakeFormData>) => void;
-  formId?: string;
 }
 
-export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
-  const { 
-    messages, 
-    setMessages, 
-    pendingSuggestions, 
-    setPendingSuggestions, 
-    isLoading, 
-    setIsLoading 
-  } = useChatContext();
+export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: 'Hello! I\'m here to help you develop your procurement scope. Let\'s start with understanding what you need. Can you describe the background or problem you\'re trying to solve?',
+      timestamp: new Date(),
+      suggestions: [
+        'We need data analysis services',
+        'Looking for IT consulting',
+        'Require professional services',
+        'Need construction services'
+      ]
+    }
+  ]);
   
   const [input, setInput] = useState("");
-  const [isProcessingSuggestions, setIsProcessingSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Load existing suggestions when formId changes
-  useEffect(() => {
-    const loadExistingSuggestions = async () => {
-      if (!formId) return;
-      
-      try {
-        const { data: suggestions, error } = await AISuggestionsService.getSuggestionsForForm(formId);
-        if (!error && suggestions) {
-          setPendingSuggestions(suggestions.filter(s => s.status === 'pending'));
-        }
-      } catch (error) {
-        console.error('Error loading existing suggestions:', error);
-      }
-    };
-
-    loadExistingSuggestions();
-  }, [formId, setPendingSuggestions]);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,13 +43,13 @@ export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
   }, [messages]);
 
   const handleSend = async (message?: string) => {
-    const messageToSend = message || input.trim();
-    if (!messageToSend || isLoading) return;
+    const messageText = message || input.trim();
+    if (!messageText) return;
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user", 
-      content: messageToSend,
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageText,
       timestamp: new Date()
     };
 
@@ -74,66 +58,46 @@ export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
     setIsLoading(true);
 
     try {
-      // Generate AI response
-      const aiResponse = await generateAIResponse(messageToSend, formData, messages);
+      // Call AI edge function
+      const aiResponse = await generateAIResponse(messageText, formData, messages);
+      
       setMessages(prev => [...prev, aiResponse]);
       
-      // Process AI suggestions extraction
-      await processSuggestions(messageToSend, userMessage.id);
-      
-      // Auto-update form data based on message
-      updateFormDataFromMessage(messageToSend, onUpdate);
+      // Update form data based on AI extraction
+      updateFormDataFromMessage(messageText, onUpdate);
       
     } catch (error) {
       console.error('AI response error:', error);
-      const fallbackResponse = generateFallbackResponse(messageToSend, formData);
+      // Fallback to local response
+      const fallbackResponse = generateFallbackResponse(messageText, formData);
       setMessages(prev => [...prev, fallbackResponse]);
+      
+      toast({
+        title: "AI Temporarily Unavailable",
+        description: "Using fallback response. AI features will return shortly.",
+        variant: "default"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processSuggestions = async (message: string, messageId: string) => {
-    if (!formId) return; // Need a saved form to attach suggestions to
-    
-    setIsProcessingSuggestions(true);
-    try {
-      const extractionResults = extractSuggestionsFromMessage(message);
-      
-      for (const result of extractionResults) {
-        const { data, error } = await AISuggestionsService.createSuggestion(
-          formId,
-          result.sectionType,
-          result.items,
-          messageId,
-          result.confidence
-        );
-        
-        if (data && !error) {
-          setPendingSuggestions(prev => [...prev, data]);
-        }
-      }
-    } catch (error) {
-      console.error('Error processing suggestions:', error);
-    } finally {
-      setIsProcessingSuggestions(false);
-    }
-  };
-
-  const handleConfirmDeliverables = (deliverables: Deliverable[]) => {
+  const handleConfirmDeliverables = (deliverables: any[]) => {
     const currentDeliverables = formData.deliverables || [];
-    const newDeliverables = [...currentDeliverables, ...deliverables];
+    const newDeliverables = [...currentDeliverables];
+    
+    deliverables.forEach(newDel => {
+      if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
+        newDeliverables.push(newDel);
+      }
+    });
+    
     onUpdate({ deliverables: newDeliverables });
     
-    // Add confirmation message
-    const confirmationMessage: ChatMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      role: 'assistant',
-      content: `✅ Successfully added ${deliverables.length} deliverable(s) to your form! You can see them in the "Identified Deliverables" section below and modify them anytime.`,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, confirmationMessage]);
+    toast({
+      title: "Deliverables Added",
+      description: `${deliverables.length} deliverable${deliverables.length > 1 ? 's' : ''} added to your form`,
+    });
   };
 
   const generateAIResponse = async (userMessage: string, formData: IntakeFormData, conversationHistory: ChatMessage[]): Promise<ChatMessage> => {
@@ -154,49 +118,60 @@ export const ScopeChat = ({ formData, onUpdate, formId }: ScopeChatProps) => {
       return {
         id: Date.now().toString(),
         role: 'assistant',
-        content: data.response || "I understand. Let me help you with that.",
+        content: data.response,
         timestamp: new Date(),
-        suggestions: data.suggestions || ["Define project timeline", "Set budget parameters", "Add evaluation criteria"]
+        suggestions: data.suggestions || []
       };
     } catch (error) {
-      console.error('Error calling AI function:', error);
+      console.error('AI response error:', error);
       throw error;
     }
   };
 
   const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
+    // Extract potential deliverables from user message
     const extractedDeliverables = extractDeliverablesFromMessage(userMessage);
     
-    let suggestions = ['Define project timeline', 'Set budget parameters', 'Add evaluation criteria'];
+    let response = "";
+    let suggestions: string[] = [];
     
-    // Check for restrictive language
-    const restrictiveTerms = checkRestrictiveLanguage(userMessage);
-    if (restrictiveTerms.length > 0) {
-      suggestions = ['Revise language to be vendor-neutral', 'Review procurement compliance', 'Clarify requirements'];
-    }
-    
-    let responseContent = '';
-    
-    if (extractedDeliverables.length > 0) {
-      responseContent = `Perfect! I've identified ${extractedDeliverables.length} deliverable(s) from your message:
-
-${extractedDeliverables.map((d, i) => `${i + 1}. ${d.name}`).join('\n')}
-
-Would you like me to add these to your form? You can review and modify them later in the "Identified Deliverables" section below.`;
+    // Check if user mentioned deliverables
+    if (extractedDeliverables.length > 0 && 
+        (userMessage.toLowerCase().includes('deliverable') || 
+         userMessage.toLowerCase().includes('need') || 
+         userMessage.toLowerCase().includes('require'))) {
+      
+      response = `I identified ${extractedDeliverables.length} potential deliverable${extractedDeliverables.length > 1 ? 's' : ''} from your message:\n\n`;
+      
+      extractedDeliverables.forEach((del, index) => {
+        response += `${index + 1}. **${del.name}**\n`;
+      });
+      
+      response += `\nWould you like me to add these deliverables to your procurement form? I can also help you refine the descriptions or add additional details.`;
+      
+      suggestions = ['Yes, add these deliverables', 'Let me refine them first', 'Add more deliverables'];
+      
+    } else if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
+      response = "I see you're looking for data analysis services. Let me help you define the specific deliverables. Are you looking for:\n\n• Data collection and cleansing\n• Statistical analysis and modeling\n• Data visualization and reporting\n• Business intelligence solutions";
+      suggestions = ['Data collection', 'Statistical modeling', 'Data visualization', 'All of the above'];
+    } else if (userMessage.toLowerCase().includes('it') || userMessage.toLowerCase().includes('technology')) {
+      response = "Great! For IT services, let's identify the key areas. Common deliverables include:\n\n• System design and architecture\n• Software development\n• Infrastructure management\n• Security assessment";
+      suggestions = ['System design', 'Software development', 'Infrastructure', 'Security'];
     } else {
-      responseContent = `I understand you want to define deliverables for your procurement. To help extract specific deliverables, try formatting them as:
-
-• Numbered list (1. Monthly reports, 2. Dashboard, etc.)
-• Bullet points (- Report, - Analysis, etc.) 
-• Quoted items ("Final report", "Training sessions")
-
-Could you provide more specific details about the deliverables you need?`;
+      response = "Thank you for that information. To ensure we capture all requirements, could you help me understand:\n\n1. What specific deliverables do you expect?\n2. What's your target timeline?\n3. Are there any special requirements or constraints?";
+      suggestions = ['Define deliverables', 'Set timeline', 'Add constraints'];
     }
-    
+
+    // Check for restrictive language
+    const restrictiveFlags = checkRestrictiveLanguage(userMessage);
+    if (restrictiveFlags.length > 0) {
+      response += `\n\n⚠️ **Compliance Alert**: I noticed some potentially restrictive requirements: ${restrictiveFlags.join(', ')}. Let's ensure these meet fairness and openness requirements.`;
+    }
+
     return {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString(),
       role: 'assistant',
-      content: responseContent,
+      content: response,
       timestamp: new Date(),
       suggestions,
       extractedDeliverables: extractedDeliverables.length > 0 ? extractedDeliverables : undefined
@@ -204,108 +179,71 @@ Could you provide more specific details about the deliverables you need?`;
   };
 
   const checkRestrictiveLanguage = (text: string): string[] => {
-    const restrictiveTerms = [
-      'only', 'must use', 'specifically', 'exclusively', 'proprietary',
-      'brand name', 'sole source', 'unique', 'patented', 'copyrighted'
-    ];
-    
-    return restrictiveTerms.filter(term => 
-      text.toLowerCase().includes(term.toLowerCase())
-    );
-  };
-
-  // Enhanced AI suggestion extraction for multiple sections
-  const extractSuggestionsFromMessage = (message: string): SuggestionExtractionResult[] => {
-    // Use enhanced extraction service
-    return SuggestionExtractionService.extractSuggestions(message);
-  };
-
-  const extractDeliverablesFromMessage = (message: string): Deliverable[] => {
-    const deliverables: Deliverable[] = [];
-    
-    // Enhanced patterns for deliverable extraction
-    const patterns = [
-      // Numbered lists: "1. Monthly progress reports"
-      /^\s*\d+\.\s*(.+?)(?:\s*\((\d+)\s*(?:deliverables?|reports?|sessions?)\))?$/gim,
-      // Bullet points: "- Comprehensive data analysis dashboard"
-      /^\s*[-•*]\s*(.+?)(?:\s*\((\d+)\s*(?:deliverables?|reports?|sessions?)\))?$/gim,
-      // Quoted items: "Monthly progress reports"
-      /"([^"]+)"/g,
-      // General deliverable mentions
-      /(?:deliverable|report|dashboard|session|document|analysis):\s*(.+?)(?:\n|$)/gi
+    const flags: string[] = [];
+    const restrictivePatterns = [
+      { pattern: /\d{2,}\s*years?\s*(of\s*)?experience/i, flag: "High experience requirement" },
+      { pattern: /must\s+be\s+certified\s+by/i, flag: "Specific certification requirement" },
+      { pattern: /only.*brand|brand.*only/i, flag: "Brand restriction" },
+      { pattern: /minimum.*40.*years/i, flag: "Excessive experience requirement" }
     ];
 
-    patterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(message)) !== null) {
-        const name = match[1]?.trim();
-        if (name && name.length > 3) {
-          const quantity = match[2] ? parseInt(match[2]) : 1;
-          deliverables.push({
-            id: crypto.randomUUID(),
-            name: name,
-            description: `AI-suggested deliverable: ${name}`,
-            selected: false
-          });
-        }
+    restrictivePatterns.forEach(({ pattern, flag }) => {
+      if (pattern.test(text)) {
+        flags.push(flag);
       }
     });
 
+    return flags;
+  };
+
+  const extractDeliverablesFromMessage = (message: string): any[] => {
+    const deliverables: any[] = [];
+    
+    // Pattern for numbered lists (1. 2. etc.)
+    const numberedPattern = /(\d+)\.?\s*([^,;\n]+?)(?=[,;\n]|\d+\.|$)/gi;
+    let match;
+    
+    while ((match = numberedPattern.exec(message)) !== null) {
+      const name = match[2].trim().replace(/['"]/g, '');
+      if (name.length > 3) { // Filter out very short matches
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
+      }
+    }
+    
+    // Pattern for bullet points (-, *, •)
+    const bulletPattern = /[•\-\*]\s*([^,;\n]+?)(?=[,;\n]|[•\-\*]|$)/gi;
+    while ((match = bulletPattern.exec(message)) !== null) {
+      const name = match[1].trim().replace(/['"]/g, '');
+      if (name.length > 3 && !deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
+      }
+    }
+    
+    // Pattern for quoted items
+    const quotedPattern = /['"]([^'"]{4,})['"]/gi;
+    while ((match = quotedPattern.exec(message)) !== null) {
+      const name = match[1].trim();
+      if (!deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+        deliverables.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: name,
+          description: `Deliverable: ${name}`,
+          selected: true
+        });
+      }
+    }
+    
     return deliverables;
-  };
-
-  // Extract mandatory criteria from message
-  const extractMandatoryCriteria = (message: string): any[] => {
-    const criteria: any[] = [];
-    const patterns = [
-      /(?:mandatory|required|must have|essential).*?(?:criteria|requirement|qualification)[^.]*?(?:include|require|involve)[^.]*?([^.]+)/gi,
-      /(?:vendor|supplier|contractor).*?(?:must|required to|shall)[^.]*?([^.]+)/gi
-    ];
-
-    patterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(message)) !== null) {
-        const description = match[1]?.trim();
-        if (description && description.length > 10) {
-          criteria.push({
-            id: crypto.randomUUID(),
-            name: description.length > 50 ? description.substring(0, 47) + '...' : description,
-            description: description,
-            type: 'mandatory'
-          });
-        }
-      }
-    });
-
-    return criteria;
-  };
-
-  // Extract rated criteria from message
-  const extractRatedCriteria = (message: string): any[] => {
-    const criteria: any[] = [];
-    const patterns = [
-      /(?:evaluation|rating|scoring|assessment).*?(?:criteria|factor)[^.]*?([^.]+)/gi,
-      /(?:weight|score|rate|evaluate)[^.]*?(?:based on|according to|considering)[^.]*?([^.]+)/gi,
-      /(?:methodology|approach|innovation|experience)[^.]*?(?:will be|to be).*?(?:evaluated|assessed|scored)[^.]*?([^.]*)/gi
-    ];
-
-    patterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(message)) !== null) {
-        const description = match[1]?.trim();
-        if (description && description.length > 10) {
-          criteria.push({
-            id: crypto.randomUUID(),
-            name: description.length > 50 ? description.substring(0, 47) + '...' : description,
-            description: description,
-            type: 'rated',
-            weight: 20 // Default weight
-          });
-        }
-      }
-    });
-
-    return criteria;
   };
 
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
@@ -320,87 +258,8 @@ Could you provide more specific details about the deliverables you need?`;
     }
   };
 
-  const handleSuggestionAccept = async (suggestionId: string, content: any) => {
-    try {
-      // Find the suggestion to process
-      const suggestion = pendingSuggestions.find(s => s.id === suggestionId);
-      if (!suggestion) return;
-
-      // Update suggestion status to accepted
-      await AISuggestionsService.updateSuggestionStatus(suggestionId, 'accepted');
-      
-      // Process the content based on suggestion type
-      if (suggestion.sectionType === 'deliverables' && content.deliverables) {
-        const currentDeliverables = formData.deliverables || [];
-        const newDeliverables = [...currentDeliverables, ...content.deliverables];
-        onUpdate({ deliverables: newDeliverables });
-      } else if (suggestion.sectionType === 'mandatory_criteria' && content.criteria) {
-        const currentRequirements = formData.requirements || {
-          mandatory: [],
-          rated: [],
-          priceWeight: 60
-        };
-        const updatedRequirements = {
-          ...currentRequirements,
-          mandatory: [...currentRequirements.mandatory, ...content.criteria]
-        };
-        onUpdate({ requirements: updatedRequirements });
-      } else if (suggestion.sectionType === 'rated_criteria' && content.criteria) {
-        const currentRequirements = formData.requirements || {
-          mandatory: [],
-          rated: [],
-          priceWeight: 60
-        };
-        const updatedRequirements = {
-          ...currentRequirements,
-          rated: [...currentRequirements.rated, ...content.criteria]
-        };
-        onUpdate({ requirements: updatedRequirements });
-      }
-
-      // Remove from pending
-      setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-      
-      // Add confirmation message
-      const confirmationMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `✅ Successfully added ${suggestion.sectionType.replace('_', ' ')} to your form! You can see and edit them in the appropriate section below.`,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, confirmationMessage]);
-    } catch (error) {
-      console.error('Error accepting suggestion:', error);
-    }
-  };
-
-  const handleSuggestionReject = (suggestionId: string) => {
-    setPendingSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-  };
-
-  const handleSuggestionUpdate = () => {
-    // Refresh suggestions if needed
-  };
-
   return (
     <div className="space-y-4">
-      {/* AI Suggestions Section */}
-      {pendingSuggestions.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-muted-foreground">AI Suggestions</h3>
-          {pendingSuggestions.map(suggestion => (
-            <AISuggestionCard
-              key={suggestion.id}
-              suggestion={suggestion}
-              onAccept={handleSuggestionAccept}
-              onReject={handleSuggestionReject}
-              onUpdate={handleSuggestionUpdate}
-            />
-          ))}
-        </div>
-      )}
-      
       <div className="h-96 overflow-y-auto border rounded-lg p-4 space-y-4">
         {messages.map((message) => (
           <div
@@ -426,32 +285,26 @@ Could you provide more specific details about the deliverables you need?`;
                   {/* Show extracted deliverables for confirmation */}
                   {(message as any).extractedDeliverables && (message as any).extractedDeliverables.length > 0 && (
                     <div className="mt-4 p-3 bg-secondary/20 rounded-lg border">
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4" />
-                        Extracted Deliverables:
-                      </h4>
+                      <h4 className="font-medium mb-2">Extracted Deliverables:</h4>
                       <div className="space-y-1 mb-3">
                         {(message as any).extractedDeliverables.map((del: any, idx: number) => (
                           <div key={idx} className="text-sm">• {del.name}</div>
                         ))}
                       </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
-                          className="flex items-center gap-1"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          Add to Form
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleSend("Let me refine these deliverables")}
-                        >
-                          Refine
-                        </Button>
-                      </div>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleConfirmDeliverables((message as any).extractedDeliverables)}
+                        className="mr-2"
+                      >
+                        Add to Form
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleSend("Let me refine these deliverables")}
+                      >
+                        Refine
+                      </Button>
                     </div>
                   )}
                   
@@ -461,7 +314,7 @@ Could you provide more specific details about the deliverables you need?`;
                         <Badge
                           key={index}
                           variant="secondary"
-                          className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                          className="cursor-pointer hover:bg-secondary/80"
                           onClick={() => handleSend(suggestion)}
                         >
                           {suggestion}
@@ -478,11 +331,11 @@ Could you provide more specific details about the deliverables you need?`;
         {isLoading && (
           <div className="flex gap-3 justify-start">
             <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-              <Loader2 className="w-4 h-4 text-secondary-foreground animate-spin" />
+              <Bot className="w-4 h-4 text-secondary-foreground animate-pulse" />
             </div>
             <Card>
               <CardContent className="p-3">
-                <p className="text-muted-foreground">AI is analyzing your request...</p>
+                <p className="text-muted-foreground">AI is thinking...</p>
               </CardContent>
             </Card>
           </div>
@@ -495,20 +348,12 @@ Could you provide more specific details about the deliverables you need?`;
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Describe your project needs, deliverables, or ask procurement questions..."
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Describe your procurement needs..."
+          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           disabled={isLoading}
         />
-        <Button 
-          onClick={() => handleSend()} 
-          disabled={!input.trim() || isLoading}
-          size="icon"
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+        <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
+          <Send className="w-4 h-4" />
         </Button>
       </div>
     </div>
