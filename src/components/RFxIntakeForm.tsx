@@ -14,6 +14,7 @@ import { IntakeFormData } from "@/types/intake";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
 import { useToast } from "@/hooks/use-toast";
 import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ScopeChatProvider } from "@/contexts/ScopeChatContext";
 
 export const RFxIntakeForm = () => {
   const [formData, setFormData] = useState<IntakeFormData>({
@@ -100,7 +101,8 @@ export const RFxIntakeForm = () => {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <ScopeChatProvider>
+      <div className="max-w-6xl mx-auto space-y-6">
       {/* Form Header with Save Status */}
       <div className="flex items-center justify-between">
         <div>
@@ -261,5 +263,6 @@ export const RFxIntakeForm = () => {
         </TabsContent>
       </Tabs>
     </div>
+    </ScopeChatProvider>
   );
 };

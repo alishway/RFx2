@@ -7,6 +7,7 @@ import { Send, Bot, User, AlertTriangle } from "lucide-react";
 import { ChatMessage, IntakeFormData } from "@/types/intake";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useScopeChat } from "@/contexts/ScopeChatContext";
 
 interface ScopeChatProps {
   formData: IntakeFormData;
@@ -14,20 +15,7 @@ interface ScopeChatProps {
 }
 
 export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m here to help you develop your procurement scope. Let\'s start with understanding what you need. Can you describe the background or problem you\'re trying to solve?',
-      timestamp: new Date(),
-      suggestions: [
-        'We need data analysis services',
-        'Looking for IT consulting',
-        'Require professional services',
-        'Need construction services'
-      ]
-    }
-  ]);
+  const { messages, setMessages } = useScopeChat();
   
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -133,7 +121,8 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
-        suggestions: data.suggestions || []
+        suggestions: data.suggestions || [],
+        extractedDeliverables: data.extractedDeliverables || []
       };
     } catch (error) {
       console.error('AI response error:', error);
@@ -142,28 +131,79 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
-    // Extract potential deliverables from user message
-    const extractedDeliverables = extractDeliverablesFromMessage(userMessage);
-    
     let response = "";
     let suggestions: string[] = [];
+    let extractedDeliverables: any[] = [];
     
-    // Check if user mentioned deliverables
-    if (extractedDeliverables.length > 0 && 
-        (userMessage.toLowerCase().includes('deliverable') || 
-         userMessage.toLowerCase().includes('need') || 
-         userMessage.toLowerCase().includes('require'))) {
+    // Handle deliverable suggestions specifically
+    if (userMessage.toLowerCase().includes('deliverable') || 
+        userMessage.toLowerCase().includes('suggest') || 
+        userMessage.toLowerCase().includes('need')) {
       
-      response = `I identified ${extractedDeliverables.length} potential deliverable${extractedDeliverables.length > 1 ? 's' : ''} from your message:\n\n`;
-      
-      extractedDeliverables.forEach((del, index) => {
-        response += `${index + 1}. **${del.name}**\n`;
-      });
-      
-      response += `\nWould you like me to add these deliverables to your procurement form? I can also help you refine the descriptions or add additional details.`;
-      
-      suggestions = ['Yes, add these deliverables', 'Let me refine them first', 'Add more deliverables'];
-      
+      // Generate relevant deliverables based on context
+      if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
+        extractedDeliverables = [
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Comprehensive Data Analysis Report",
+            description: "A detailed report summarizing findings from the data analysis, including trends, patterns, and anomalies in patient outcomes.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Dashboards and Visualizations",
+            description: "Interactive dashboards that present key metrics and trends, allowing stakeholders to visualize data in real-time. This could include graphs, charts, and maps illustrating outcomes across different hospitals.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Data Quality Assessment Report",
+            description: "An assessment of data quality, completeness, and reliability across all data sources used in the analysis.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Methodology Documentation",
+            description: "Detailed documentation of analytical methods, algorithms, and statistical techniques used in the analysis.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Executive Summary Presentation",
+            description: "A high-level presentation suitable for executive stakeholders, highlighting key findings and recommendations.",
+            selected: true
+          }
+        ];
+        
+        response = "Based on your data analysis project, here are some key deliverables I recommend for your procurement:";
+        suggestions = ['Add more deliverables', 'Refine descriptions', 'Set timelines'];
+        
+      } else {
+        // Generic deliverables for other services
+        extractedDeliverables = [
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Project Plan and Timeline",
+            description: "Comprehensive project plan with milestones, deliverables timeline, and resource allocation.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Final Report",
+            description: "Detailed final report documenting all work completed, findings, and recommendations.",
+            selected: true
+          },
+          {
+            id: Math.random().toString(36).substr(2, 9),
+            name: "Training Materials",
+            description: "Training documentation and materials for knowledge transfer to client staff.",
+            selected: true
+          }
+        ];
+        
+        response = "Here are some standard deliverables for your project:";
+        suggestions = ['Add more deliverables', 'Customize descriptions', 'Review scope'];
+      }
     } else if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
       response = "I see you're looking for data analysis services. Let me help you define the specific deliverables. Are you looking for:\n\n• Data collection and cleansing\n• Statistical analysis and modeling\n• Data visualization and reporting\n• Business intelligence solutions";
       suggestions = ['Data collection', 'Statistical modeling', 'Data visualization', 'All of the above'];
@@ -207,56 +247,6 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     });
 
     return flags;
-  };
-
-  const extractDeliverablesFromMessage = (message: string): any[] => {
-    const deliverables: any[] = [];
-    
-    // Pattern for numbered lists (1. 2. etc.)
-    const numberedPattern = /(\d+)\.?\s*([^,;\n]+?)(?=[,;\n]|\d+\.|$)/gi;
-    let match;
-    
-    while ((match = numberedPattern.exec(message)) !== null) {
-      const name = match[2].trim().replace(/['"]/g, '');
-      if (name.length > 3) { // Filter out very short matches
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
-      }
-    }
-    
-    // Pattern for bullet points (-, *, •)
-    const bulletPattern = /[•\-\*]\s*([^,;\n]+?)(?=[,;\n]|[•\-\*]|$)/gi;
-    while ((match = bulletPattern.exec(message)) !== null) {
-      const name = match[1].trim().replace(/['"]/g, '');
-      if (name.length > 3 && !deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
-      }
-    }
-    
-    // Pattern for quoted items
-    const quotedPattern = /['"]([^'"]{4,})['"]/gi;
-    while ((match = quotedPattern.exec(message)) !== null) {
-      const name = match[1].trim();
-      if (!deliverables.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-        deliverables.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: name,
-          description: `Deliverable: ${name}`,
-          selected: true
-        });
-      }
-    }
-    
-    return deliverables;
   };
 
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
