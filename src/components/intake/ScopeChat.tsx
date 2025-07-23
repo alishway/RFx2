@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Send, Bot, User, AlertTriangle } from "lucide-react";
-import { ChatMessage, IntakeFormData } from "@/types/intake";
+import { ChatMessage, IntakeFormData, Deliverable, Requirement } from "@/types/intake";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useScopeChat } from "@/contexts/ScopeChatContext";
+import { AIContentCard } from "./ai-assistant/AIContentCard";
+import { detectContentType, generateContentSuggestions, ContentType } from "./ai-assistant/AIPromptHandler";
 
 interface ScopeChatProps {
   formData: IntakeFormData;
@@ -70,34 +72,79 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     }
   };
 
-  const handleAddSingleDeliverable = (deliverable: any) => {
-    const currentDeliverables = formData.deliverables || [];
-    if (!currentDeliverables.some(existing => existing.name.toLowerCase() === deliverable.name.toLowerCase())) {
-      const newDeliverables = [...currentDeliverables, deliverable];
-      onUpdate({ deliverables: newDeliverables });
-      
-      toast({
-        title: "Deliverable Added",
-        description: `"${deliverable.name}" added to your form`,
-      });
+  const handleAddSingleItem = (item: any, contentType: ContentType) => {
+    switch (contentType) {
+      case 'deliverables':
+        const currentDeliverables = formData.deliverables || [];
+        if (!currentDeliverables.some(existing => existing.name.toLowerCase() === item.name.toLowerCase())) {
+          const newDeliverable: Deliverable = {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            selected: true
+          };
+          onUpdate({ deliverables: [...currentDeliverables, newDeliverable] });
+          toast({
+            title: "Deliverable Added",
+            description: `"${item.name}" added to your form`,
+          });
+        }
+        break;
+        
+      case 'mandatory':
+        const currentMandatory = formData.requirements?.mandatory || [];
+        if (!currentMandatory.some(existing => existing.name.toLowerCase() === item.name.toLowerCase())) {
+          const newRequirement: Requirement = {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            type: 'mandatory'
+          };
+          onUpdate({ 
+            requirements: {
+              ...formData.requirements!,
+              mandatory: [...currentMandatory, newRequirement]
+            }
+          });
+          toast({
+            title: "Mandatory Criterion Added",
+            description: `"${item.name}" added to your form`,
+          });
+        }
+        break;
+        
+      case 'rated':
+        const currentRated = formData.requirements?.rated || [];
+        if (!currentRated.some(existing => existing.name.toLowerCase() === item.name.toLowerCase())) {
+          const newRequirement: Requirement = {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            type: 'rated',
+            weight: item.weight || 10,
+            scale: item.scale || '0-100 points'
+          };
+          onUpdate({ 
+            requirements: {
+              ...formData.requirements!,
+              rated: [...currentRated, newRequirement]
+            }
+          });
+          toast({
+            title: "Rated Criterion Added",
+            description: `"${item.name}" added to your form`,
+          });
+        }
+        break;
     }
   };
 
-  const handleConfirmDeliverables = (deliverables: any[]) => {
-    const currentDeliverables = formData.deliverables || [];
-    const newDeliverables = [...currentDeliverables];
-    
-    deliverables.forEach(newDel => {
-      if (!newDeliverables.some(existing => existing.name.toLowerCase() === newDel.name.toLowerCase())) {
-        newDeliverables.push(newDel);
-      }
-    });
-    
-    onUpdate({ deliverables: newDeliverables });
+  const handleAddAllItems = (items: any[], contentType: ContentType) => {
+    items.forEach(item => handleAddSingleItem(item, contentType));
     
     toast({
-      title: "Deliverables Added",
-      description: `${deliverables.length} deliverable${deliverables.length > 1 ? 's' : ''} added to your form`,
+      title: `${contentType.charAt(0).toUpperCase() + contentType.slice(1)} Added`,
+      description: `${items.length} ${contentType} item${items.length > 1 ? 's' : ''} added to your form`,
     });
   };
 
@@ -131,103 +178,42 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const generateFallbackResponse = (userMessage: string, formData: IntakeFormData): ChatMessage => {
-    let response = "";
-    let suggestions: string[] = [];
-    let extractedDeliverables: any[] = [];
+    const contentType = detectContentType(userMessage);
+    const { items, response } = generateContentSuggestions(contentType, userMessage, formData);
     
-    // Handle deliverable suggestions specifically
-    if (userMessage.toLowerCase().includes('deliverable') || 
-        userMessage.toLowerCase().includes('suggest') || 
-        userMessage.toLowerCase().includes('need')) {
-      
-      // Generate relevant deliverables based on context
-      if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
-        extractedDeliverables = [
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Comprehensive Data Analysis Report",
-            description: "A detailed report summarizing findings from the data analysis, including trends, patterns, and anomalies in patient outcomes.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Dashboards and Visualizations",
-            description: "Interactive dashboards that present key metrics and trends, allowing stakeholders to visualize data in real-time. This could include graphs, charts, and maps illustrating outcomes across different hospitals.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Data Quality Assessment Report",
-            description: "An assessment of data quality, completeness, and reliability across all data sources used in the analysis.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Methodology Documentation",
-            description: "Detailed documentation of analytical methods, algorithms, and statistical techniques used in the analysis.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Executive Summary Presentation",
-            description: "A high-level presentation suitable for executive stakeholders, highlighting key findings and recommendations.",
-            selected: true
-          }
-        ];
-        
-        response = "Based on your data analysis project, here are some key deliverables I recommend for your procurement:";
+    let suggestions: string[] = [];
+    
+    // Generate contextual suggestions
+    switch (contentType) {
+      case 'deliverables':
         suggestions = ['Add more deliverables', 'Refine descriptions', 'Set timelines'];
-        
-      } else {
-        // Generic deliverables for other services
-        extractedDeliverables = [
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Project Plan and Timeline",
-            description: "Comprehensive project plan with milestones, deliverables timeline, and resource allocation.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Final Report",
-            description: "Detailed final report documenting all work completed, findings, and recommendations.",
-            selected: true
-          },
-          {
-            id: Math.random().toString(36).substr(2, 9),
-            name: "Training Materials",
-            description: "Training documentation and materials for knowledge transfer to client staff.",
-            selected: true
-          }
-        ];
-        
-        response = "Here are some standard deliverables for your project:";
-        suggestions = ['Add more deliverables', 'Customize descriptions', 'Review scope'];
-      }
-    } else if (userMessage.toLowerCase().includes('data') || userMessage.toLowerCase().includes('analysis')) {
-      response = "I see you're looking for data analysis services. Let me help you define the specific deliverables. Are you looking for:\n\n• Data collection and cleansing\n• Statistical analysis and modeling\n• Data visualization and reporting\n• Business intelligence solutions";
-      suggestions = ['Data collection', 'Statistical modeling', 'Data visualization', 'All of the above'];
-    } else if (userMessage.toLowerCase().includes('it') || userMessage.toLowerCase().includes('technology')) {
-      response = "Great! For IT services, let's identify the key areas. Common deliverables include:\n\n• System design and architecture\n• Software development\n• Infrastructure management\n• Security assessment";
-      suggestions = ['System design', 'Software development', 'Infrastructure', 'Security'];
-    } else {
-      response = "Thank you for that information. To ensure we capture all requirements, could you help me understand:\n\n1. What specific deliverables do you expect?\n2. What's your target timeline?\n3. Are there any special requirements or constraints?";
-      suggestions = ['Define deliverables', 'Set timeline', 'Add constraints'];
+        break;
+      case 'mandatory':
+        suggestions = ['Add more criteria', 'Review compliance', 'Set thresholds'];
+        break;
+      case 'rated':
+        suggestions = ['Adjust weights', 'Add more criteria', 'Review scoring'];
+        break;
+      default:
+        suggestions = ['Suggest deliverables', 'Create mandatory criteria', 'Generate rated criteria'];
+        break;
     }
 
     // Check for restrictive language
     const restrictiveFlags = checkRestrictiveLanguage(userMessage);
+    let finalResponse = response;
     if (restrictiveFlags.length > 0) {
-      response += `\n\n⚠️ **Compliance Alert**: I noticed some potentially restrictive requirements: ${restrictiveFlags.join(', ')}. Let's ensure these meet fairness and openness requirements.`;
+      finalResponse += `\n\n⚠️ **Compliance Alert**: I noticed some potentially restrictive requirements: ${restrictiveFlags.join(', ')}. Let's ensure these meet fairness and openness requirements.`;
     }
 
     return {
       id: Date.now().toString(),
       role: 'assistant',
-      content: response,
+      content: finalResponse,
       timestamp: new Date(),
       suggestions,
-      extractedDeliverables: extractedDeliverables.length > 0 ? extractedDeliverables : undefined
+      extractedDeliverables: items.length > 0 ? items : undefined,
+      contentType
     };
   };
 
@@ -249,6 +235,24 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     return flags;
   };
 
+  const getContentTitle = (contentType?: string): string => {
+    switch (contentType) {
+      case 'deliverables': return 'AI Suggested Deliverables';
+      case 'mandatory': return 'AI Suggested Mandatory Criteria';
+      case 'rated': return 'AI Suggested Rated Criteria';
+      default: return 'AI Suggestions';
+    }
+  };
+
+  const getRefineMessage = (contentType?: string): string => {
+    switch (contentType) {
+      case 'deliverables': return 'Let me refine these deliverables';
+      case 'mandatory': return 'Let me refine these mandatory criteria';
+      case 'rated': return 'Let me refine these rated criteria';
+      default: return 'Let me refine these suggestions';
+    }
+  };
+
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
     // Extract commodity type
     if (message.toLowerCase().includes('data analysis') && !formData.commodityType) {
@@ -258,6 +262,17 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     // Update background if empty
     if (!formData.background) {
       onUpdate({ background: message });
+    }
+    
+    // Initialize requirements structure if needed
+    if (!formData.requirements) {
+      onUpdate({ 
+        requirements: {
+          mandatory: [],
+          rated: [],
+          priceWeight: 30
+        }
+      });
     }
   };
 
@@ -285,49 +300,16 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
                 <CardContent className="p-3">
                   <p className="whitespace-pre-wrap">{message.content}</p>
                   
-                  {/* Show extracted deliverables for confirmation */}
+                  {/* Show AI suggested content cards */}
                   {message.extractedDeliverables && message.extractedDeliverables.length > 0 && (
-                    <div className="mt-4 p-3 bg-secondary/20 rounded-lg border">
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        AI Suggested Deliverables:
-                        <Badge variant="secondary" className="text-xs">
-                          {message.extractedDeliverables.length} found
-                        </Badge>
-                      </h4>
-                      <div className="space-y-2 mb-3">
-                        {message.extractedDeliverables.map((del: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-background/50 rounded border">
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">{del.name}</div>
-                              <div className="text-xs text-muted-foreground">{del.description}</div>
-                            </div>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleAddSingleDeliverable(del)}
-                              className="ml-2"
-                            >
-                              Add to Form
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleConfirmDeliverables(message.extractedDeliverables)}
-                        >
-                          Add All
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleSend("Let me refine these deliverables")}
-                        >
-                          Refine
-                        </Button>
-                      </div>
-                    </div>
+                    <AIContentCard
+                      title={getContentTitle(message.contentType)}
+                      items={message.extractedDeliverables}
+                      onAddItem={(item) => handleAddSingleItem(item, message.contentType || 'deliverables')}
+                      onAddAll={(items) => handleAddAllItems(items, message.contentType || 'deliverables')}
+                      onRefine={() => handleSend(getRefineMessage(message.contentType))}
+                      contentType={message.contentType || 'deliverables'}
+                    />
                   )}
                   
                   {message.suggestions && message.suggestions.length > 0 && (

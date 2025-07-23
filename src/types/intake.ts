@@ -48,5 +48,6 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   suggestions?: string[];
-  extractedDeliverables?: Deliverable[];
+  extractedDeliverables?: any[];
+  contentType?: 'deliverables' | 'mandatory' | 'rated' | 'general';
 }
