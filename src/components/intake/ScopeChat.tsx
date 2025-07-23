@@ -145,7 +145,60 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   };
 
   const handleAddAllItems = (items: any[], contentType: ContentType) => {
-    items.forEach(item => handleAddSingleItem(item, contentType));
+    switch (contentType) {
+      case 'deliverables':
+        const currentDeliverables = formData.deliverables || [];
+        const newDeliverables = items.filter(item => 
+          !currentDeliverables.some(existing => existing.name.toLowerCase() === item.name.toLowerCase())
+        ).map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          selected: true
+        }));
+        onUpdate({ deliverables: [...currentDeliverables, ...newDeliverables] });
+        break;
+        
+      case 'mandatory':
+        const currentMandatory = formData.requirements?.mandatory || [];
+        const newMandatory = items.filter(item => 
+          !currentMandatory.some(existing => existing.name?.toLowerCase() === item.name.toLowerCase())
+        ).map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          type: 'mandatory' as const
+        }));
+        onUpdate({ 
+          requirements: {
+            mandatory: [...currentMandatory, ...newMandatory],
+            rated: formData.requirements?.rated || [],
+            priceWeight: formData.requirements?.priceWeight || 30
+          }
+        });
+        break;
+        
+      case 'rated':
+        const currentRated = formData.requirements?.rated || [];
+        const newRated = items.filter(item => 
+          !currentRated.some(existing => existing.name?.toLowerCase() === item.name.toLowerCase())
+        ).map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          type: 'rated' as const,
+          weight: item.weight || 10,
+          scale: item.scale || '0-100 points'
+        }));
+        onUpdate({ 
+          requirements: {
+            mandatory: formData.requirements?.mandatory || [],
+            rated: [...currentRated, ...newRated],
+            priceWeight: formData.requirements?.priceWeight || 30
+          }
+        });
+        break;
+    }
     
     toast({
       title: `${contentType.charAt(0).toUpperCase() + contentType.slice(1)} Added`,
