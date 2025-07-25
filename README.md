@@ -1,73 +1,81 @@
-# Welcome to your Lovable project
+# RFx Dev Assist
 
-## Project info
+**Streamline your procurement process with AI-powered assistance**
 
-**URL**: https://lovable.dev/projects/55969b19-8675-4153-a610-ec690f92af13
+## About This Project
 
-## How can I edit this code?
+RFx Dev Assist is a comprehensive procurement management application that helps organizations streamline their RFP (Request for Proposal), RFQ (Request for Quote), and RFI (Request for Information) processes using AI-powered assistance.
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- **AI-Powered Intake Forms**: Intelligent form generation and validation
+- **Role-Based Access Control**: Different user roles (End User, Procurement Lead, Approver, Admin)
+- **Real-time Collaboration**: Chat-based requirement refinement
+- **Document Management**: File upload and attachment handling
+- **Audit Trail**: Complete tracking of all changes and approvals
+- **Dashboard Views**: Customized dashboards for different user roles
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/55969b19-8675-4153-a610-ec690f92af13) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+ and npm (install with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- Supabase account for backend services
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Installation
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clone the repository
+git clone https://github.com/alishway/RFx2.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to the project directory
+cd RFx2
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Environment Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env` file with your Supabase credentials:
 
-**Use GitHub Codespaces**
+```
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Technologies Used
 
-## What technologies are used for this project?
+- **Frontend**: React, TypeScript, Vite
+- **UI Components**: shadcn/ui, Tailwind CSS
+- **Backend**: Supabase (Database, Authentication, Storage)
+- **State Management**: React Query (TanStack Query)
+- **Routing**: React Router
 
-This project is built with:
+## Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The application can be deployed to any static hosting service:
 
-## How can I deploy this project?
+- **Vercel** (recommended)
+- **Netlify** 
+- **AWS S3 + CloudFront**
+- **GitHub Pages**
 
-Simply open [Lovable](https://lovable.dev/projects/55969b19-8675-4153-a610-ec690f92af13) and click on Share -> Publish.
+## Contributing
 
-## Can I connect a custom domain to my Lovable project?
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Yes, you can!
+## License
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is licensed under the MIT License.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Support
+
+For support and questions, please open an issue in the GitHub repository.
