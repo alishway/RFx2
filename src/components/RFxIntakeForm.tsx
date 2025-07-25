@@ -19,9 +19,10 @@ import { ScopeChatProvider } from "@/contexts/ScopeChatContext";
 interface RFxIntakeFormProps {
   initialData?: IntakeFormData | null;
   formId?: string;
+  savedFormData?: SavedIntakeForm | null;
 }
 
-export const RFxIntakeForm = ({ initialData, formId: existingFormId }: RFxIntakeFormProps) => {
+export const RFxIntakeForm = ({ initialData, formId: existingFormId, savedFormData }: RFxIntakeFormProps) => {
   const [formData, setFormData] = useState<IntakeFormData>({
     title: "",
     background: "",
@@ -111,11 +112,13 @@ export const RFxIntakeForm = ({ initialData, formId: existingFormId }: RFxIntake
   }, [initialData]);
 
   useEffect(() => {
-    // Set saved form ID if provided
-    if (existingFormId) {
+    // Set saved form data if provided
+    if (savedFormData) {
+      setSavedForm(savedFormData);
+    } else if (existingFormId) {
       setSavedForm({ id: existingFormId } as SavedIntakeForm);
     }
-  }, [existingFormId]);
+  }, [savedFormData, existingFormId]);
 
   return (
     <ScopeChatProvider>

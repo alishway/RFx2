@@ -13,6 +13,7 @@ const IntakeForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [initialData, setInitialData] = useState<IntakeFormData | null>(null);
+  const [savedFormData, setSavedFormData] = useState<SavedIntakeForm | null>(null);
   const [loading, setLoading] = useState(false);
   const isNewForm = formId === "new";
 
@@ -37,6 +38,9 @@ const IntakeForm = () => {
       }
 
       if (data) {
+        // Store the complete saved form data
+        setSavedFormData(data);
+        
         // Convert SavedIntakeForm to IntakeFormData
         const formData: IntakeFormData = {
           title: data.title,
@@ -114,6 +118,7 @@ const IntakeForm = () => {
           <RFxIntakeForm 
             initialData={initialData}
             formId={isNewForm ? undefined : formId}
+            savedFormData={savedFormData}
           />
         </div>
       </div>
