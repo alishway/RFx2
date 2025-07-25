@@ -6,7 +6,7 @@ import { Plus, CheckCircle } from "lucide-react";
 interface AIContentItem {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   type?: 'mandatory' | 'rated';
   weight?: number;
   scale?: string;
@@ -69,7 +69,14 @@ export const AIContentCard = ({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-1">
                   <div className="font-medium text-sm">{item.name}</div>
-                  <div className="text-xs text-muted-foreground">{item.description}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {item.description || (
+                      contentType === 'deliverables' ? 'No description provided' :
+                      contentType === 'mandatory' ? 'No requirement details provided' :
+                      contentType === 'rated' ? 'No evaluation criteria provided' :
+                      'No details provided'
+                    )}
+                  </div>
                   {item.type && (
                     <div className="flex gap-2">
                       <Badge variant={item.type === 'mandatory' ? 'destructive' : 'default'} className="text-xs">

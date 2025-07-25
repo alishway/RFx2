@@ -235,10 +235,55 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
   matches.forEach((match, index) => {
     const fullText = match[1].trim();
     
-    // Split by common separators to get name and description
-    const parts = fullText.split(/[:\-–—]/);
-    const name = parts[0].trim();
-    const description = parts.slice(1).join(':').trim() || name;
+    // Enhanced parsing for different content types
+    let name = '';
+    let description = '';
+    
+    if (contentType === 'deliverables') {
+      // Look for patterns like "Title: Description" or "**Title** Description"
+      const titleDescMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+)$/) || 
+                            fullText.match(/^(.+?):\s*(.+)$/) ||
+                            fullText.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+      
+      if (titleDescMatch) {
+        name = titleDescMatch[1].trim();
+        description = titleDescMatch[2].trim();
+      } else {
+        name = fullText;
+        description = ''; // Don't duplicate the name
+      }
+    } else if (contentType === 'mandatory') {
+      // Look for patterns like "**Title** Requirement:" or "Title: Requirement"
+      const titleReqMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+)$/) || 
+                           fullText.match(/^(.+?):\s*(.+)$/) ||
+                           fullText.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+      
+      if (titleReqMatch) {
+        name = titleReqMatch[1].trim();
+        description = titleReqMatch[2].trim();
+      } else {
+        name = fullText;
+        description = ''; // Don't duplicate the name
+      }
+    } else if (contentType === 'rated') {
+      // Look for patterns with weight information
+      const weightMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i) ||
+                         fullText.match(/^(.+?):\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i) ||
+                         fullText.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i);
+      
+      if (weightMatch) {
+        name = weightMatch[1].trim();
+        description = weightMatch[2].trim();
+      } else {
+        name = fullText;
+        description = ''; // Don't duplicate the name
+      }
+    } else {
+      // General parsing
+      const parts = fullText.split(/[:\-–—]/);
+      name = parts[0].trim();
+      description = parts.slice(1).join(':').trim();
+    }
 
     const baseId = contentType === 'deliverables' ? 'del' : 
                   contentType === 'mandatory' ? 'mand' : 'rated';
@@ -246,13 +291,13 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
     const item: any = {
       id: `${baseId}_${Date.now()}_${index + 1}`,
       name: name,
-      description: description
+      description: description || undefined // Don't set empty string, use undefined to avoid duplication
     };
 
     // Add content-type specific properties
     if (contentType === 'rated') {
       // Try to extract weight from the text
-      const weightMatch = description.match(/(\d+)%|weight.*?(\d+)/i);
+      const weightMatch = fullText.match(/(\d+)%|weight.*?(\d+)/i);
       item.weight = weightMatch ? parseInt(weightMatch[1] || weightMatch[2]) : 10;
       item.scale = "0-100 points";
       item.type = 'rated';
