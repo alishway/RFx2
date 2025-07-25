@@ -212,48 +212,58 @@ Structure your suggestions as numbered or bulleted items for easy parsing.`;
 function parseStructuredContentFromResponse(aiResponse: string, contentType: string): any[] {
   const items: any[] = [];
   
+  console.log('Parsing AI response for content type:', contentType);
+  console.log('AI Response:', aiResponse);
+  
   // Look for numbered list items with multi-line content
   const numberedItemPattern = /^(\d+)\.\s*(.+?)(?=\n\d+\.|$)/gms;
   const matches = [...aiResponse.matchAll(numberedItemPattern)];
+  
+  console.log('Found matches:', matches.length);
 
   // Parse each numbered item
   matches.forEach((match, index) => {
     const fullItemText = match[2].trim();
+    console.log(`Processing item ${index + 1}:`, fullItemText);
     
-    // Extract the main title (usually in bold like **Title**)
+    // Split into lines for processing
+    const lines = fullItemText.split('\n').map(line => line.trim()).filter(line => line);
+    
     let name = '';
     let description = '';
     
-    const lines = fullItemText.split('\n').map(line => line.trim()).filter(line => line);
-    
     if (lines.length > 0) {
-      // First line should contain the title, possibly in bold
+      // Extract title from first line (usually in bold like **Title**)
       const firstLine = lines[0];
       const boldTitleMatch = firstLine.match(/^\*\*(.+?)\*\*/);
       
       if (boldTitleMatch) {
         name = boldTitleMatch[1].trim();
-        // Everything after the title in the first line and all subsequent lines
-        const remainingFirstLine = firstLine.replace(/^\*\*(.+?)\*\*\s*/, '').trim();
-        const allContent = remainingFirstLine ? [remainingFirstLine, ...lines.slice(1)] : lines.slice(1);
-        description = allContent.join(' ').trim();
+        
+        // Collect ALL remaining content from bullet points
+        const contentLines = lines.slice(1);
+        const descriptionParts: string[] = [];
+        
+        contentLines.forEach(line => {
+          // Remove markdown bullet formatting and bold formatting
+          const cleanLine = line
+            .replace(/^[-*•]\s*/, '') // Remove bullet points
+            .replace(/^\*\*(.+?)\*\*:\s*/, '$1: ') // Convert **Label**: to Label:
+            .replace(/^\*\*(.+?)\*\*\s*/, '$1: '); // Convert **Label** to Label:
+          
+          if (cleanLine.trim()) {
+            descriptionParts.push(cleanLine.trim());
+          }
+        });
+        
+        description = descriptionParts.join(' ');
+        console.log(`Extracted name: "${name}", description: "${description}"`);
       } else {
-        // If no bold formatting, try to extract title from patterns like "Title:" or "Title -"
-        const titleMatch = firstLine.match(/^(.+?)[:–—-]\s*(.+)$/);
-        if (titleMatch) {
-          name = titleMatch[1].trim();
-          description = [titleMatch[2], ...lines.slice(1)].join(' ').trim();
-        } else {
-          // Use the whole first line as title if no clear separator
-          name = firstLine;
-          description = lines.slice(1).join(' ').trim();
-        }
+        // Fallback: use whole first line as title
+        name = firstLine;
+        description = lines.slice(1).join(' ').trim();
+        console.log(`Fallback extraction - name: "${name}", description: "${description}"`);
       }
-    }
-
-    // If no description found, set to undefined to trigger fallback text
-    if (!description) {
-      description = undefined;
     }
 
     const baseId = contentType === 'deliverables' ? 'del' : 
@@ -262,7 +272,7 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
     const item: any = {
       id: `${baseId}_${Date.now()}_${index + 1}`,
       name: name || `Item ${index + 1}`,
-      description: description
+      description: description || undefined
     };
 
     // Add content-type specific properties
@@ -276,6 +286,7 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
       item.type = 'mandatory';
     }
 
+    console.log('Final item:', item);
     items.push(item);
   });
 
