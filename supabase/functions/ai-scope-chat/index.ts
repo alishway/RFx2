@@ -20,6 +20,8 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    const contentType = detectContentType(message);
+    
     const systemPrompt = `You are an AI assistant specialized in Canadian public sector procurement. Your role is to help users develop comprehensive and compliant RFx (Request for Proposals/Quotes) documents.
 
 CORE RESPONSIBILITIES:
@@ -41,6 +43,8 @@ Commodity Type: ${formData.commodityType || 'Not specified'}
 Deliverables: ${formData.deliverables.length} items defined
 Requirements: ${formData.requirements.mandatory.length} mandatory, ${formData.requirements.rated.length} rated criteria
 Budget Tolerance: ${formData.budgetTolerance || 'Not set'}
+
+${getContentSpecificPrompt(contentType)}
 
 Respond in a helpful, professional manner. If you identify compliance concerns, clearly explain them and suggest alternatives. Keep responses concise but comprehensive.`;
 
@@ -72,13 +76,11 @@ Respond in a helpful, professional manner. If you identify compliance concerns, 
 
     const aiResponse = data.choices[0].message.content;
 
-    // Detect content type and generate structured suggestions
-    const contentType = detectContentType(message);
+    // Parse structured content from AI response
     let extractedDeliverables: any[] = [];
 
     if (contentType !== 'general') {
-      const structuredContent = generateStructuredContent(contentType, message, formData);
-      extractedDeliverables = structuredContent.items;
+      extractedDeliverables = parseStructuredContentFromResponse(aiResponse, contentType);
     }
 
     // Analyze for compliance flags
@@ -174,82 +176,132 @@ function detectContentType(message: string): string {
   return 'general';
 }
 
-// Helper function to generate structured content based on type
-function generateStructuredContent(contentType: string, message: string, formData: any): { items: any[] } {
+// Helper function to get content-specific prompts that encourage structured output
+function getContentSpecificPrompt(contentType: string): string {
   switch (contentType) {
     case 'deliverables':
-      return {
-        items: [
-          {
-            id: `del_${Date.now()}_1`,
-            name: "Project Charter",
-            description: "Comprehensive project initiation document outlining scope, objectives, and methodology",
-            timeline: "Week 1"
-          },
-          {
-            id: `del_${Date.now()}_2`,
-            name: "Data Analysis Report",
-            description: "Detailed analysis of provided datasets with insights and recommendations",
-            timeline: "Week 4"
-          },
-          {
-            id: `del_${Date.now()}_3`,
-            name: "Final Presentation",
-            description: "Executive summary presentation of findings and strategic recommendations",
-            timeline: "Week 6"
-          }
-        ]
-      };
+      return `DELIVERABLES REQUEST DETECTED: When providing deliverables suggestions, format your response to include clear deliverable items. For each deliverable, provide:
+- A clear, specific name/title
+- A detailed description of what will be delivered
+- Any relevant timing or dependencies
+
+Structure your suggestions as numbered or bulleted items for easy parsing.`;
 
     case 'mandatory':
-      return {
-        items: [
-          {
-            id: `mand_${Date.now()}_1`,
-            name: "Professional Certification",
-            description: "Vendor must hold relevant professional certification in the field of expertise"
-          },
-          {
-            id: `mand_${Date.now()}_2`,
-            name: "Financial Standing",
-            description: "Vendor must demonstrate financial stability through audited financial statements"
-          },
-          {
-            id: `mand_${Date.now()}_3`,
-            name: "Security Clearance",
-            description: "Key personnel must possess appropriate government security clearance level"
-          }
-        ]
-      };
+      return `MANDATORY CRITERIA REQUEST DETECTED: When providing mandatory criteria suggestions, format your response to include clear pass/fail requirements. For each criterion, provide:
+- A clear, specific requirement name
+- A detailed description of what must be met
+- Any relevant compliance standards or thresholds
+
+Structure your suggestions as numbered or bulleted items for easy parsing.`;
 
     case 'rated':
-      return {
-        items: [
-          {
-            id: `rated_${Date.now()}_1`,
-            name: "Technical Approach",
-            description: "Quality and feasibility of proposed methodology and technical solution",
-            weight: 30,
-            scale: "0-100 points"
-          },
-          {
-            id: `rated_${Date.now()}_2`,
-            name: "Team Qualifications",
-            description: "Experience and expertise of proposed project team members",
-            weight: 25,
-            scale: "0-100 points"
-          },
-          {
-            id: `rated_${Date.now()}_3`,
-            name: "Past Performance",
-            description: "Track record of successful project delivery in similar contexts",
-            weight: 20,
-            scale: "0-100 points"
-          }
-        ]
-      };
+      return `RATED CRITERIA REQUEST DETECTED: When providing rated criteria suggestions, format your response to include clear evaluation criteria. For each criterion, provide:
+- A clear, specific criterion name  
+- A detailed description of what will be evaluated
+- Suggested weight/scoring information where appropriate
+
+Structure your suggestions as numbered or bulleted items for easy parsing.`;
 
     default:
-      return { items: [] };
+      return '';
   }
+}
+
+// Helper function to parse structured content from AI response
+function parseStructuredContentFromResponse(aiResponse: string, contentType: string): any[] {
+  const items: any[] = [];
+  
+  // Look for numbered or bulleted list items
+  const listPatterns = [
+    /^\d+\.\s*(.+?)(?=\n\d+\.|$)/gm,  // Numbered lists (1. 2. 3.)
+    /^-\s*(.+?)(?=\n-|$)/gm,          // Dash lists (- item)
+    /^\*\s*(.+?)(?=\n\*|$)/gm,        // Asterisk lists (* item)
+    /^•\s*(.+?)(?=\n•|$)/gm           // Bullet lists (• item)
+  ];
+
+  let matches: RegExpMatchArray[] = [];
+  
+  // Try each pattern to find list items
+  for (const pattern of listPatterns) {
+    const found = [...aiResponse.matchAll(pattern)];
+    if (found.length > 0) {
+      matches = found;
+      break;
+    }
+  }
+
+  // Parse each match into structured items
+  matches.forEach((match, index) => {
+    const fullText = match[1].trim();
+    
+    // Split by common separators to get name and description
+    const parts = fullText.split(/[:\-–—]/);
+    const name = parts[0].trim();
+    const description = parts.slice(1).join(':').trim() || name;
+
+    const baseId = contentType === 'deliverables' ? 'del' : 
+                  contentType === 'mandatory' ? 'mand' : 'rated';
+    
+    const item: any = {
+      id: `${baseId}_${Date.now()}_${index + 1}`,
+      name: name,
+      description: description
+    };
+
+    // Add content-type specific properties
+    if (contentType === 'rated') {
+      // Try to extract weight from the text
+      const weightMatch = description.match(/(\d+)%|weight.*?(\d+)/i);
+      item.weight = weightMatch ? parseInt(weightMatch[1] || weightMatch[2]) : 10;
+      item.scale = "0-100 points";
+      item.type = 'rated';
+    } else if (contentType === 'mandatory') {
+      item.type = 'mandatory';
+    }
+
+    items.push(item);
+  });
+
+  // If no structured list found, try to extract from paragraph text
+  if (items.length === 0 && contentType !== 'general') {
+    // Fallback: look for key phrases that might indicate items
+    const keyPhrases = contentType === 'deliverables' 
+      ? ['report', 'document', 'presentation', 'analysis', 'deliverable']
+      : contentType === 'mandatory'
+      ? ['must', 'required', 'certification', 'experience', 'qualification']
+      : ['approach', 'quality', 'experience', 'performance', 'methodology'];
+
+    const sentences = aiResponse.split(/[.!?]+/);
+    let itemCount = 0;
+
+    sentences.forEach((sentence, index) => {
+      const lowerSentence = sentence.toLowerCase();
+      const hasKeyPhrase = keyPhrases.some(phrase => lowerSentence.includes(phrase));
+      
+      if (hasKeyPhrase && sentence.trim().length > 20 && itemCount < 5) {
+        const baseId = contentType === 'deliverables' ? 'del' : 
+                      contentType === 'mandatory' ? 'mand' : 'rated';
+        
+        const item: any = {
+          id: `${baseId}_${Date.now()}_${itemCount + 1}`,
+          name: sentence.trim().substring(0, 50) + '...',
+          description: sentence.trim()
+        };
+
+        if (contentType === 'rated') {
+          item.weight = 15;
+          item.scale = "0-100 points";
+          item.type = 'rated';
+        } else if (contentType === 'mandatory') {
+          item.type = 'mandatory';
+        }
+
+        items.push(item);
+        itemCount++;
+      }
+    });
+  }
+
+  return items.slice(0, 8); // Limit to 8 items maximum
 }

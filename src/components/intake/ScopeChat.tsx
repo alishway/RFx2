@@ -219,7 +219,7 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
 
       if (error) throw error;
 
-      // Detect content type for AI responses too
+      // Detect content type for AI responses
       const contentType = detectContentType(userMessage);
 
       return {
