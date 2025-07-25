@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, AlertTriangle } from "lucide-react";
+import { Send, Bot, User, AlertTriangle, Copy, Check } from "lucide-react";
 import { ChatMessage, IntakeFormData, Deliverable, Requirement } from "@/types/intake";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
   
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -312,6 +313,29 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
     }
   };
 
+  const handleCopyResponse = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      
+      toast({
+        title: "Copied!",
+        description: "AI response copied to clipboard",
+      });
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedMessageId(null);
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Unable to copy to clipboard",
+        variant: "destructive"
+      });
+    }
+  };
+
   const updateFormDataFromMessage = (message: string, onUpdate: (updates: Partial<IntakeFormData>) => void) => {
     // Extract commodity type
     if (message.toLowerCase().includes('data analysis') && !formData.commodityType) {
@@ -357,7 +381,24 @@ export const ScopeChat = ({ formData, onUpdate }: ScopeChatProps) => {
               </div>
                 <Card className={message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}>
                 <CardContent className="p-3">
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="whitespace-pre-wrap flex-1">{message.content}</p>
+                    {message.role === 'assistant' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => handleCopyResponse(message.id, message.content)}
+                        aria-label="Copy AI response to clipboard"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   
                   {/* Show AI suggested content cards */}
                   {message.extractedDeliverables && message.extractedDeliverables.length > 0 && (
