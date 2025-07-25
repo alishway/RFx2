@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,20 @@ export const FileUpload = ({ formId, attachments, onAttachmentsChange }: FileUpl
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Load uploaded files when component mounts or formId changes
+  useEffect(() => {
+    const loadUploadedFiles = async () => {
+      if (formId) {
+        const { data } = await FileService.getFormAttachments(formId);
+        setUploadedFiles(data || []);
+      } else {
+        setUploadedFiles([]);
+      }
+    };
+
+    loadUploadedFiles();
+  }, [formId]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
