@@ -212,73 +212,93 @@ Structure your suggestions as numbered or bulleted items for easy parsing.`;
 function parseStructuredContentFromResponse(aiResponse: string, contentType: string): any[] {
   const items: any[] = [];
   
-  console.log('Parsing AI response for content type:', contentType);
-  console.log('AI Response:', aiResponse);
+  console.log('=== PARSING DEBUG ===');
+  console.log('Content type:', contentType);
+  console.log('AI Response length:', aiResponse.length);
+  console.log('AI Response first 500 chars:', aiResponse.substring(0, 500));
   
-  // Look for numbered list items with multi-line content
-  const numberedItemPattern = /^(\d+)\.\s*(.+?)(?=\n\d+\.|$)/gms;
+  // Look for numbered list items - more flexible pattern
+  const numberedItemPattern = /(\d+)\.\s*\*\*(.+?)\*\*([\s\S]*?)(?=\n\d+\.\s*\*\*|$)/g;
   const matches = [...aiResponse.matchAll(numberedItemPattern)];
   
   console.log('Found matches:', matches.length);
 
-  // Parse each numbered item
-  matches.forEach((match, index) => {
-    const fullItemText = match[2].trim();
-    console.log(`Processing item ${index + 1}:`, fullItemText);
+  if (matches.length === 0) {
+    // Fallback: try simpler numbered pattern
+    const fallbackPattern = /(\d+)\.\s*(.+?)(?=\n\d+\.|$)/gms;
+    const fallbackMatches = [...aiResponse.matchAll(fallbackPattern)];
+    console.log('Fallback matches found:', fallbackMatches.length);
     
-    // Split into lines for processing
-    const lines = fullItemText.split('\n').map(line => line.trim()).filter(line => line);
-    
-    let name = '';
-    let description = '';
-    
-    if (lines.length > 0) {
-      // Extract title from first line (usually in bold like **Title**)
-      const firstLine = lines[0];
-      const boldTitleMatch = firstLine.match(/^\*\*(.+?)\*\*/);
+    fallbackMatches.forEach((match, index) => {
+      const fullText = match[2].trim();
+      console.log(`Fallback item ${index + 1}:`, fullText.substring(0, 100));
       
-      if (boldTitleMatch) {
-        name = boldTitleMatch[1].trim();
-        
-        // Collect ALL remaining content from bullet points
-        const contentLines = lines.slice(1);
-        const descriptionParts: string[] = [];
-        
-        contentLines.forEach(line => {
-          // Remove markdown bullet formatting and bold formatting
-          const cleanLine = line
-            .replace(/^[-*•]\s*/, '') // Remove bullet points
-            .replace(/^\*\*(.+?)\*\*:\s*/, '$1: ') // Convert **Label**: to Label:
-            .replace(/^\*\*(.+?)\*\*\s*/, '$1: '); // Convert **Label** to Label:
-          
-          if (cleanLine.trim()) {
-            descriptionParts.push(cleanLine.trim());
-          }
-        });
-        
-        description = descriptionParts.join(' ');
-        console.log(`Extracted name: "${name}", description: "${description}"`);
-      } else {
-        // Fallback: use whole first line as title
-        name = firstLine;
-        description = lines.slice(1).join(' ').trim();
-        console.log(`Fallback extraction - name: "${name}", description: "${description}"`);
+      // Simple extraction for fallback
+      const lines = fullText.split('\n').filter(line => line.trim());
+      const name = lines[0].replace(/^\*\*(.+?)\*\*/, '$1').trim();
+      const description = lines.slice(1).join(' ').trim();
+      
+      const baseId = contentType === 'deliverables' ? 'del' : 
+                    contentType === 'mandatory' ? 'mand' : 'rated';
+      
+      const item: any = {
+        id: `${baseId}_${Date.now()}_${index + 1}`,
+        name: name,
+        description: description || undefined
+      };
+
+      if (contentType === 'rated') {
+        item.weight = 10;
+        item.scale = "0-100 points";
+        item.type = 'rated';
+      } else if (contentType === 'mandatory') {
+        item.type = 'mandatory';
       }
-    }
+
+      items.push(item);
+    });
+    
+    return items;
+  }
+
+  // Process main matches
+  matches.forEach((match, index) => {
+    const itemNumber = match[1];
+    const itemTitle = match[2].trim();
+    const itemContent = match[3].trim();
+    
+    console.log(`\n--- Processing item ${itemNumber} ---`);
+    console.log('Title:', itemTitle);
+    console.log('Content:', itemContent.substring(0, 200));
+    
+    // Extract all content after the title
+    const contentLines = itemContent.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        // Clean up bullet points and formatting
+        return line
+          .replace(/^[-•*]\s*/, '') // Remove bullet markers
+          .replace(/^\*\*(.+?)\*\*:\s*/, '$1: ') // Convert **Label**: to Label:
+          .replace(/^\*\*(.+?)\*\*\s*/, '$1: '); // Convert **Label** to Label:
+      });
+    
+    const description = contentLines.join(' ').trim();
+    
+    console.log('Final description:', description.substring(0, 150));
 
     const baseId = contentType === 'deliverables' ? 'del' : 
                   contentType === 'mandatory' ? 'mand' : 'rated';
     
     const item: any = {
       id: `${baseId}_${Date.now()}_${index + 1}`,
-      name: name || `Item ${index + 1}`,
+      name: itemTitle,
       description: description || undefined
     };
 
     // Add content-type specific properties
     if (contentType === 'rated') {
-      // Try to extract weight from the full text
-      const weightMatch = fullItemText.match(/(\d+)\s*points?|weight.*?(\d+)%?/i);
+      const weightMatch = itemContent.match(/(\d+)\s*points?|weight.*?(\d+)%?/i);
       item.weight = weightMatch ? parseInt(weightMatch[1] || weightMatch[2]) : 10;
       item.scale = "0-100 points";
       item.type = 'rated';
@@ -286,7 +306,7 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
       item.type = 'mandatory';
     }
 
-    console.log('Final item:', item);
+    console.log('Final item:', JSON.stringify(item, null, 2));
     items.push(item);
   });
 
