@@ -16,7 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Save, AlertCircle, CheckCircle2 } from "lucide-react";
 import { ScopeChatProvider } from "@/contexts/ScopeChatContext";
 
-export const RFxIntakeForm = () => {
+interface RFxIntakeFormProps {
+  initialData?: IntakeFormData | null;
+  formId?: string;
+}
+
+export const RFxIntakeForm = ({ initialData, formId: existingFormId }: RFxIntakeFormProps) => {
   const [formData, setFormData] = useState<IntakeFormData>({
     title: "",
     background: "",
@@ -95,10 +100,22 @@ export const RFxIntakeForm = () => {
   };
 
   useEffect(() => {
+    // Set initial data if provided
+    if (initialData) {
+      setFormData(initialData);
+    }
+    
     return () => {
       IntakeFormService.clearAutosave();
     };
-  }, []);
+  }, [initialData]);
+
+  useEffect(() => {
+    // Set saved form ID if provided
+    if (existingFormId) {
+      setSavedForm({ id: existingFormId } as SavedIntakeForm);
+    }
+  }, [existingFormId]);
 
   return (
     <ScopeChatProvider>
