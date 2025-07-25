@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProcurementReviewService } from "@/services/procurementReviewService";
+import UserMenu from "@/components/UserMenu";
 import type { Database } from "@/integrations/supabase/types";
 
 type IntakeForm = Database["public"]["Tables"]["intake_forms"]["Row"];
@@ -98,7 +99,7 @@ export const ProcurementDashboard = () => {
               Review and approve RFx submissions from end users
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <Badge variant="outline" className="gap-1">
               <Clock className="h-3 w-3" />
               {getStatusCount("submitted")} Pending Review
@@ -107,6 +108,7 @@ export const ProcurementDashboard = () => {
               <AlertCircle className="h-3 w-3" />
               {getStatusCount("in_review")} In Progress
             </Badge>
+            <UserMenu />
           </div>
         </div>
 

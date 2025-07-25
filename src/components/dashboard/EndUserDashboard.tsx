@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
+import UserMenu from "@/components/UserMenu";
 import type { Database } from "@/integrations/supabase/types";
 
 const statusColors = {
@@ -82,10 +83,13 @@ export const EndUserDashboard = () => {
               Manage your procurement requests and track their progress
             </p>
           </div>
-          <Button onClick={handleCreateNew} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create New RFx Form
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={handleCreateNew} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create New RFx Form
+            </Button>
+            <UserMenu />
+          </div>
         </div>
 
         {/* Status Overview Cards */}
