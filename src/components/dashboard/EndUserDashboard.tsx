@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { IntakeFormService, SavedIntakeForm } from "@/services/intakeFormService";
 import UserMenu from "@/components/UserMenu";
@@ -30,6 +32,7 @@ const statusLabels = {
 export const EndUserDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [forms, setForms] = useState<SavedIntakeForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,6 +62,32 @@ export const EndUserDashboard = () => {
 
   const handleEditForm = (formId: string) => {
     navigate(`/intake-form/${formId}`);
+  };
+
+  const handleDeleteForm = async (formId: string, formTitle: string) => {
+    try {
+      const { success, error } = await IntakeFormService.deleteForm(formId);
+      
+      if (success) {
+        setForms(forms.filter(form => form.id !== formId));
+        toast({
+          title: "Form deleted",
+          description: `"${formTitle}" has been deleted successfully.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error || "Failed to delete form",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete form",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredForms = forms.filter(form => {
@@ -215,14 +244,46 @@ export const EndUserDashboard = () => {
                       <div className="text-sm text-muted-foreground">
                         {Array.isArray(form.deliverables) ? form.deliverables.length : 0} deliverables
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleEditForm(form.id)}
-                        disabled={form.status === "submitted" || form.status === "in_review"}
-                      >
-                        {form.status === "draft" ? "Continue Editing" : "View Details"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEditForm(form.id)}
+                          disabled={form.status === "submitted" || form.status === "in_review"}
+                        >
+                          {form.status === "draft" ? "Continue Editing" : "View Details"}
+                        </Button>
+                        {form.status === "draft" && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete RFx Form</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{form.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteForm(form.id, form.title)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>

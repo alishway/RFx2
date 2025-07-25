@@ -136,6 +136,28 @@ export class IntakeFormService {
     }
   }
 
+  static async deleteForm(formId: string): Promise<{ success?: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: "User not authenticated" };
+      }
+
+      const { error } = await supabase
+        .from('intake_forms')
+        .delete()
+        .eq('id', formId)
+        .eq('user_id', user.id)
+        .eq('status', 'draft'); // Only allow deleting draft forms
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error deleting form:', error);
+      return { error: error.message || 'Failed to delete form' };
+    }
+  }
+
   static validateForm(formData: IntakeFormData): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
