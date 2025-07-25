@@ -212,77 +212,48 @@ Structure your suggestions as numbered or bulleted items for easy parsing.`;
 function parseStructuredContentFromResponse(aiResponse: string, contentType: string): any[] {
   const items: any[] = [];
   
-  // Look for numbered or bulleted list items
-  const listPatterns = [
-    /^\d+\.\s*(.+?)(?=\n\d+\.|$)/gm,  // Numbered lists (1. 2. 3.)
-    /^-\s*(.+?)(?=\n-|$)/gm,          // Dash lists (- item)
-    /^\*\s*(.+?)(?=\n\*|$)/gm,        // Asterisk lists (* item)
-    /^•\s*(.+?)(?=\n•|$)/gm           // Bullet lists (• item)
-  ];
+  // Look for numbered list items with multi-line content
+  const numberedItemPattern = /^(\d+)\.\s*(.+?)(?=\n\d+\.|$)/gms;
+  const matches = [...aiResponse.matchAll(numberedItemPattern)];
 
-  let matches: RegExpMatchArray[] = [];
-  
-  // Try each pattern to find list items
-  for (const pattern of listPatterns) {
-    const found = [...aiResponse.matchAll(pattern)];
-    if (found.length > 0) {
-      matches = found;
-      break;
-    }
-  }
-
-  // Parse each match into structured items
+  // Parse each numbered item
   matches.forEach((match, index) => {
-    const fullText = match[1].trim();
+    const fullItemText = match[2].trim();
     
-    // Enhanced parsing for different content types
+    // Extract the main title (usually in bold like **Title**)
     let name = '';
     let description = '';
     
-    if (contentType === 'deliverables') {
-      // Look for patterns like "Title: Description" or "**Title** Description"
-      const titleDescMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+)$/) || 
-                            fullText.match(/^(.+?):\s*(.+)$/) ||
-                            fullText.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+    const lines = fullItemText.split('\n').map(line => line.trim()).filter(line => line);
+    
+    if (lines.length > 0) {
+      // First line should contain the title, possibly in bold
+      const firstLine = lines[0];
+      const boldTitleMatch = firstLine.match(/^\*\*(.+?)\*\*/);
       
-      if (titleDescMatch) {
-        name = titleDescMatch[1].trim();
-        description = titleDescMatch[2].trim();
+      if (boldTitleMatch) {
+        name = boldTitleMatch[1].trim();
+        // Everything after the title in the first line and all subsequent lines
+        const remainingFirstLine = firstLine.replace(/^\*\*(.+?)\*\*\s*/, '').trim();
+        const allContent = remainingFirstLine ? [remainingFirstLine, ...lines.slice(1)] : lines.slice(1);
+        description = allContent.join(' ').trim();
       } else {
-        name = fullText;
-        description = ''; // Don't duplicate the name
+        // If no bold formatting, try to extract title from patterns like "Title:" or "Title -"
+        const titleMatch = firstLine.match(/^(.+?)[:–—-]\s*(.+)$/);
+        if (titleMatch) {
+          name = titleMatch[1].trim();
+          description = [titleMatch[2], ...lines.slice(1)].join(' ').trim();
+        } else {
+          // Use the whole first line as title if no clear separator
+          name = firstLine;
+          description = lines.slice(1).join(' ').trim();
+        }
       }
-    } else if (contentType === 'mandatory') {
-      // Look for patterns like "**Title** Requirement:" or "Title: Requirement"
-      const titleReqMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+)$/) || 
-                           fullText.match(/^(.+?):\s*(.+)$/) ||
-                           fullText.match(/^(.+?)\s*[-–—]\s*(.+)$/);
-      
-      if (titleReqMatch) {
-        name = titleReqMatch[1].trim();
-        description = titleReqMatch[2].trim();
-      } else {
-        name = fullText;
-        description = ''; // Don't duplicate the name
-      }
-    } else if (contentType === 'rated') {
-      // Look for patterns with weight information
-      const weightMatch = fullText.match(/^\*\*(.+?)\*\*\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i) ||
-                         fullText.match(/^(.+?):\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i) ||
-                         fullText.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s*Weight:\s*(\d+)%)?(?:\s*\((.+?)\))?$/i);
-      
-      if (weightMatch) {
-        name = weightMatch[1].trim();
-        description = weightMatch[2].trim();
-      } else {
-        name = fullText;
-        description = ''; // Don't duplicate the name
-      }
-    } else {
-      // General parsing
-      const parts = fullText.split(/[:\-–—]/);
-      name = parts[0].trim();
-      description = parts.slice(1).join(':').trim();
+    }
+
+    // If no description found, set to undefined to trigger fallback text
+    if (!description) {
+      description = undefined;
     }
 
     const baseId = contentType === 'deliverables' ? 'del' : 
@@ -290,14 +261,14 @@ function parseStructuredContentFromResponse(aiResponse: string, contentType: str
     
     const item: any = {
       id: `${baseId}_${Date.now()}_${index + 1}`,
-      name: name,
-      description: description || undefined // Don't set empty string, use undefined to avoid duplication
+      name: name || `Item ${index + 1}`,
+      description: description
     };
 
     // Add content-type specific properties
     if (contentType === 'rated') {
-      // Try to extract weight from the text
-      const weightMatch = fullText.match(/(\d+)%|weight.*?(\d+)/i);
+      // Try to extract weight from the full text
+      const weightMatch = fullItemText.match(/(\d+)\s*points?|weight.*?(\d+)%?/i);
       item.weight = weightMatch ? parseInt(weightMatch[1] || weightMatch[2]) : 10;
       item.scale = "0-100 points";
       item.type = 'rated';
